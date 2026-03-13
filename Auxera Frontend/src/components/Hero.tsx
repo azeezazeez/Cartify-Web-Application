@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 
 const CAROUSEL_IMAGES = [
   {
-    url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&auto=format&fit=crop',
+    url: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&auto=format&fit=crop',
     title: 'Golden Excellence',
     subtitle: 'Luxurious.',
     description: 'Discover our curated selection of premium essentials designed for the modern individual.'
