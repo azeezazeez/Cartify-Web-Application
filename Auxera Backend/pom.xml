@@ -28,6 +28,12 @@
     </properties>
 
     <dependencies>
+
+        <dependency>
+           <groupId>org.postgresql</groupId>
+           <artifactId>postgresql</artifactId>
+        </dependency>
+             
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
