@@ -4,19 +4,19 @@ import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 
 const CAROUSEL_IMAGES = [
   {
-    url: 'https://picsum.photos/seed/fashion1/1920/1080',
+    url: 'https://images.pexels.com/photos/994234/pexels-photo-994234.jpeg?auto=compress&cs=tinysrgb&w=600',
     title: 'Golden Excellence',
     subtitle: 'Redefined.',
     description: 'Discover our curated selection of premium essentials designed for the modern individual.'
   },
   {
-    url: 'https://picsum.photos/seed/fashion2/1920/1080',
+    url: 'https://images.pexels.com/photos/190819/pexels-photo-190819.jpeg?auto=compress&cs=tinysrgb&w=600',
     title: 'Timeless Style',
     subtitle: 'Elevated.',
     description: 'Explore our new season arrivals featuring sustainable materials and classic silhouettes.'
   },
   {
-    url: 'https://picsum.photos/seed/fashion3/1920/1080',
+    url: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600',
     title: 'Modern Craft',
     subtitle: 'Perfected.',
     description: 'Every piece is a testament to our commitment to quality and attention to detail.'
