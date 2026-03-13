@@ -1,6 +1,6 @@
 import { Product, CartItem } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://auxera-full-stack-web-application.onrender.com/api';
 
 // Admin types
 export interface AdminOrder {
