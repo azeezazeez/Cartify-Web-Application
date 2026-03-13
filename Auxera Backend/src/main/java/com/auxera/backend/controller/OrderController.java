@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin(origins = "*")
+@CrossOrigin("*")
 public class OrderController {
 
     @Autowired
@@ -240,4 +240,5 @@ public class OrderController {
         return ResponseEntity
                 .ok(ApiResponse.success("Order cancelled successfully", convertToOrderResponse(cancelledOrder)));
     }
+
 }
