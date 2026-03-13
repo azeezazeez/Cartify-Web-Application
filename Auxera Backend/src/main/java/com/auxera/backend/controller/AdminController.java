@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "https://auxera-one.vercel.app/")
 public class AdminController {
 
     @Autowired
@@ -311,4 +311,5 @@ class AdminCustomerDTO {
 
     public double getTotalSpent() { return totalSpent; }
     public void setTotalSpent(double totalSpent) { this.totalSpent = totalSpent; }
+
 }
