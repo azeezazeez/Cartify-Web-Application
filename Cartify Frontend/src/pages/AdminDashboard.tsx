@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { IndianRupee } from 'lucide-react';
 import {
     Package,
     Users,
@@ -330,8 +331,8 @@ const AdminDashboard: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                                        <DollarSign className="w-6 h-6 text-green-600 dark:text-green-300" /> ₹
-                                    </div>
+                                    <IndianRupee className="w-6 h-6 text-green-600 dark:text-green-300" />
+                                 </div>
                                 </div>
                             </div>
 
