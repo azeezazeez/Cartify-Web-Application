@@ -15,13 +15,13 @@ interface ToastContainerProps {
 
 export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onRemove }) => {
   return (
-    <div className="fixed inset-0 pointer-events-none z-[100] flex items-center justify-center">
-      <div className="flex flex-col gap-2 w-full max-w-md mx-4">
+    <div className="fixed inset-x-0 bottom-0 pointer-events-none z-[100] flex justify-center">
+      <div className="flex flex-col gap-2 w-full max-w-md mx-4 mb-4">
         <AnimatePresence>
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
