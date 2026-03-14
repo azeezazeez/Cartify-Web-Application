@@ -31,7 +31,7 @@ export const Footer: React.FC<FooterProps> = ({ showToast, onShopClick }) => {
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-20">
           <div className="space-y-6">
-            <h2 className="text-3xl font-serif font-bold tracking-tighter">AUXERA</h2>
+            <h2 className="text-3xl font-serif font-bold tracking-tighter">Cartify</h2>
             <p className="text-brand-400 text-sm leading-relaxed max-w-xs">
               Crafting premium essentials for the modern lifestyle. We believe in quality, sustainability, and timeless design.
             </p>
@@ -90,7 +90,7 @@ export const Footer: React.FC<FooterProps> = ({ showToast, onShopClick }) => {
         </div>
 
         <div className="pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 text-[10px] uppercase tracking-widest text-brand-500 font-bold">
-          <p>© 2026 AUXERA STUDIO. ALL RIGHTS RESERVED.</p>
+          <p>© 2026 Cartify STUDIO. ALL RIGHTS RESERVED.</p>
           <div className="flex space-x-8">
             <a href="#" onClick={(e) => handleLinkClick(e, 'Terms of Service')} className="hover:text-white transition-colors">Terms of Service</a>
             <a href="#" onClick={(e) => handleLinkClick(e, 'Privacy Policy')} className="hover:text-white transition-colors">Privacy Policy</a>
