@@ -124,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               logoColor
             )}
           >
-            AUXERA
+            Cartify
           </Link>
         </div>
 
@@ -303,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed top-0 left-0 bottom-0 w-[80%] max-w-sm bg-white dark:bg-brand-900 z-[70] p-8 shadow-2xl"
             >
               <div className="flex justify-between items-center mb-12">
-                <span className="text-2xl font-serif font-bold tracking-tighter dark:text-white">AUXERA</span>
+                <span className="text-2xl font-serif font-bold tracking-tighter dark:text-white">Cartify</span>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="dark:text-white">
                   <X className="w-6 h-6" />
                 </button>
