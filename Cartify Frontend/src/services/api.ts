@@ -1,6 +1,6 @@
 import { Product, CartItem } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://cartify-web-application.onrender.com/api';
 
 
 // Admin types
