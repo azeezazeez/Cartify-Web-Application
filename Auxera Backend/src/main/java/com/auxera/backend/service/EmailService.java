@@ -1,4 +1,4 @@
-package com.auxera.backend.service;
+package com.Cartify.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,13 +28,13 @@ public class EmailService {
 
         Map<String, Object> requestBody = Map.of(
                 "sender", Map.of(
-                        "name", "Auxera",
+                        "name", "Cartify",
                         "email", userEmail
                 ),
                 "to", new Object[]{
                         Map.of("email", toEmail)
                 },
-                "subject", "Reset Your Auxera Password",
+                "subject", "Reset Your Cartify Password",
                 "htmlContent", buildOtpHtml(otp)
         );
 
@@ -59,7 +59,7 @@ public class EmailService {
                     
                     <div style="text-align:center; margin-bottom:30px;">
                         <h1 style="font-family: 'Times New Roman', serif; font-size:32px; font-weight:700; letter-spacing:-1px; color:#1a1a1a; margin:0;">
-                            AUXERA
+                            Cartify
                         </h1>
                         <p style="color:#666; font-size:14px; margin:5px; letter-spacing:1px;">
                             LUXURY REDEFINED
@@ -72,7 +72,7 @@ public class EmailService {
                     
                     <p style="color:#666; text-align:center; font-size:16px; line-height:1.6; margin-bottom:30px;">
                         Hello,<br>
-                        We received a request to reset your password for your AUXERA account.
+                        We received a request to reset your password for your Cartify account.
                     </p>
                     
                     <div style="text-align:center; margin:40px 20px;">
@@ -111,7 +111,7 @@ public class EmailService {
                     
                     <div style="text-align:center;">
                         <p style="font-size:12px; color:#aaa; margin:5px 0;">
-                            © 2026 AUXERA. All rights reserved.
+                            © 2026 Cartify. All rights reserved.
                         </p>
                         <p style="font-size:12px; color:#aaa; margin:5px 0;">
                             Luxury fashion for the discerning individual
