@@ -629,14 +629,14 @@ function App() {
         isSyncing={isCartSyncing}
       />
 
-      <ProductModal
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        onAddToCart={addToCart}
-        showToast={showToast}
-        isWishlisted={selectedProduct ? wishlist.some(p => p && p.id === selectedProduct.id) : false}
-        onToggleWishlist={toggleWishlist}
-      />
+  <ProductModal
+  product={selectedProduct}
+  onClose={() => setSelectedProduct(null)}
+  onAddToCart={addToCart}
+  showToast={showToast}
+  isWishlisted={selectedProduct ? (Array.isArray(wishlist) && wishlist.some(p => p && p.id === selectedProduct.id)) : false}
+  onToggleWishlist={toggleWishlist}
+  />
 
       <AuthModal
         isOpen={isAuthOpen}
