@@ -464,7 +464,7 @@ const AdminDashboard: React.FC = () => {
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Search orders by ID, customer name, or email..."
+                                        placeholder="Search orders by ID"
                                         value={searchTerm}
                                         onChange={(e) => {
                                             console.log('Search input changed:', e.target.value);
