@@ -223,93 +223,84 @@ export const api = {
   },
 
   // Wishlist - UPDATED with defensive checks
-  async getWishlist(): Promise<Product[]> {
-    const userId = getUserId();
-    if (!userId) return [];
+  // Wishlist
+async getWishlist(): Promise<Product[]> {
+  const userId = getUserId();
+  if (!userId) return [];
+  
+  try {
+    const response = await fetch(`${BASE_URL}/wishlist/${userId}`);
     
-    try {
-      const response = await fetch(`${BASE_URL}/wishlist/${userId}`);
-      
-      if (!response.ok) {
-        console.error('Wishlist fetch failed:', response.status);
-        return [];
-      }
-      
-      const result = await response.json();
-      
-      // Handle different response formats - ALWAYS return an array
-      if (result && typeof result === 'object') {
-        // If the response has a success property and data property (standard format)
-        if ('success' in result && 'data' in result) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        
-        // If the response itself is an array
-        if (Array.isArray(result)) {
-          return result;
-        }
-        
-        // If it's an object with items property
-        if (result.items && Array.isArray(result.items)) {
-          return result.items;
-        }
-      }
-      
-      // Default to empty array
+    if (!response.ok) {
+      console.error('Wishlist fetch failed:', response.status);
       return [];
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
-      return []; // Always return empty array on error
     }
-  },
-
-  // toggleWishlist - UPDATED with defensive checks
-  async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
-    const userId = getUserId();
-    if (!userId) throw new Error('User not logged in');
-
-    try {
-      // Check if item is already in wishlist - SAFELY
-      const wishlist = await this.getWishlist();
-      
-      // ✅ SAFE: Ensure wishlist is an array before using .some()
-      const currentWishlist = Array.isArray(wishlist) ? wishlist : [];
-      const isInWishlist = currentWishlist.some(p => p && p.id === productId);
-
-      if (isInWishlist) {
-        // Remove from wishlist
-        const response = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-          method: 'DELETE',
-        });
-        
-        const result = await response.json();
-        
-        if (!response.ok || (result && result.success === false)) {
-          throw new Error(result?.message || 'Failed to remove from wishlist');
-        }
-        
-        return { isWishlisted: false };
-      } else {
-        // Add to wishlist
-        const response = await fetch(`${BASE_URL}/wishlist/add`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, productId }),
-        });
-        
-        const result = await response.json();
-        
-        if (!response.ok || (result && result.success === false)) {
-          throw new Error(result?.message || 'Failed to add to wishlist');
-        }
-        
-        return { isWishlisted: true };
+    
+    const result = await response.json();
+    
+    // Handle different response formats
+    if (result && typeof result === 'object') {
+      if ('success' in result && 'data' in result) {
+        return Array.isArray(result.data) ? result.data : [];
       }
-    } catch (error) {
-      console.error('Toggle wishlist error:', error);
-      throw error; // Re-throw to be handled by the component
+      if (Array.isArray(result)) {
+        return result;
+      }
+      if (result.items && Array.isArray(result.items)) {
+        return result.items;
+      }
     }
-  },
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching wishlist:', error);
+    return [];
+  }
+},
+
+async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
+  const userId = getUserId();
+  if (!userId) throw new Error('User not logged in');
+
+  try {
+    // First, get current wishlist to check status
+    const currentWishlist = await this.getWishlist();
+    const isCurrentlyInWishlist = currentWishlist.some(p => p && p.id === productId);
+    
+    console.log('Current wishlist status:', { productId, isCurrentlyInWishlist });
+
+    let response;
+    if (isCurrentlyInWishlist) {
+      // Remove from wishlist
+      console.log('Removing from wishlist:', productId);
+      response = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      // Add to wishlist
+      console.log('Adding to wishlist:', productId);
+      response = await fetch(`${BASE_URL}/wishlist/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, productId }),
+      });
+    }
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to toggle wishlist');
+    }
+
+    // Return the NEW state (opposite of what it was)
+    return { isWishlisted: !isCurrentlyInWishlist };
+    
+  } catch (error) {
+    console.error('Toggle wishlist error:', error);
+    throw error;
+  }
+},
 
   // Orders
   async createOrder(): Promise<any> {
