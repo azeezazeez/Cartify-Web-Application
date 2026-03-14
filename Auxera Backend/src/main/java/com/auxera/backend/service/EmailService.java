@@ -1,58 +1,4 @@
-package com.auxera.backend.service;
-
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.Map;
-
-@Service
-@RequiredArgsConstructor
-public class EmailService {
-
-    @Value("${brevo.api.key}")
-    private String brevoApiKey;
-
-    @Value("${user.mail}")
-    private String userEmail;
-
-    private final RestTemplate restTemplate = new RestTemplate();
-
-    @Async
-    public void sendOtp(String toEmail, String otp) {
-
-        String url = "https://api.brevo.com/v3/smtp/email";
-
-        Map<String, Object> requestBody = Map.of(
-                "sender", Map.of(
-                        "name", "Auxera",
-                        "email", userEmail
-                ),
-                "to", new Object[]{
-                        Map.of("email", toEmail)
-                },
-                "subject", "Reset Your Auxera Password",
-                "htmlContent", buildOtpHtml(otp)
-        );
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", brevoApiKey);
-
-        HttpEntity<Map<String, Object>> entity =
-                new HttpEntity<>(requestBody, headers);
-
-        try {
-            restTemplate.postForEntity(url, entity, String.class);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to send email via Brevo API", e);
-        }
-    }
-
-   private String buildOtpHtml(String otp) {
+private String buildOtpHtml(String otp) {
     return """
         <div style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color:#f5f5f5; padding:30px;">
             <div style="max-width:600px; margin:0 auto; background:white; border-radius:16px; padding:40px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
@@ -78,28 +24,27 @@ public class EmailService {
                 </p>
                 
                 <div style="text-align:center; margin:40px 0;">
-                    <p style="color:#666; font-size:14px; margin-bottom:15px; letter-spacing:2px; text-align:center;">
+                    <p style="color:#666; font-size:14px; margin-bottom:15px; letter-spacing:2px;">
                         YOUR VERIFICATION CODE
                     </p>
-                    <!-- Fixed: OTP container with proper centering -->
-<div style="text-align:center; width:100%;">
-    <span style="
-        font-family: 'Courier New', monospace;
-        font-size:36px;
-        font-weight:600;
-        letter-spacing:8px;
-        background:#1a1a1a;
-        color:white;
-        padding:15px 30px;
-        border-radius:8px;
-        display:inline-block;
-        margin:0 auto;
-    ">""" + otp + """</span>
-</div>
+                    <div style="text-align:center; width:100%;">
+                        <span style="
+                            font-family: 'Courier New', monospace;
+                            font-size:36px;
+                            font-weight:600;
+                            letter-spacing:8px;
+                            background:#1a1a1a;
+                            color:white;
+                            padding:15px 30px;
+                            border-radius:8px;
+                            display:inline-block;
+                            margin:0 auto;
+                        \">""" + otp + """</span>
+                    </div>
                 </div>
                 
-                <div style="background:#f9f9f9; padding:20px; border-radius:12px; margin:30px 0; text-align:center;">
-                    <p style="color:#666; font-size:14px; margin:0;">
+                <div style="background:#f9f9f9; padding:20px; border-radius:12px; margin:30px 0;">
+                    <p style="color:#666; font-size:14px; margin:0; text-align:center;">
                         ⏰ This OTP is valid for <strong style="color:#1a1a1a;">5 minutes</strong>
                     </p>
                 </div>
@@ -122,6 +67,4 @@ public class EmailService {
             </div>
         </div>
         """;
-}
-
 }
