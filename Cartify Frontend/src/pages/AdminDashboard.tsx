@@ -182,12 +182,12 @@ const AdminDashboard: React.FC = () => {
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR'
-        }).format(amount);
-    };
+   const formatCurrency = (amount: number) => {
+    return '₹' + amount.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+};
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -330,7 +330,7 @@ const AdminDashboard: React.FC = () => {
                                         </p>
                                     </div>
                                     <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                                        <DollarSign className="w-6 h-6 text-green-600 dark:text-green-300" />
+                                        <DollarSign className="w-6 h-6 text-green-600 dark:text-green-300" /> ₹
                                     </div>
                                 </div>
                             </div>
