@@ -233,6 +233,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={handleClearSearch}
                 className={cn("ml-2 p-1 rounded-full hover:bg-black/10 transition-colors flex-shrink-0")}
+                aria-label="Clear search"
               >
                 <X className={cn("w-3 h-3", iconColor)} />
               </button>
