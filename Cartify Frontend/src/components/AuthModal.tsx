@@ -10,18 +10,28 @@ interface AuthModalProps {
   onLoginSuccess: (user: any) => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast, onLoginSuccess }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    otp: '',
-    newPassword: '',
-    confirmNewPassword: ''
-  });
+export const AuthModal = ({ isOpen, onClose, onLogin }) => {
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[20000]">
+      <div className="relative bg-white p-6 rounded-xl w-[350px]">
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-500 hover:text-black"
+        >
+          ✕
+        </button>
+
+        <h2 className="text-xl font-semibold mb-4">Sign In</h2>
+
+      </div>
+    </div>
+  );
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
