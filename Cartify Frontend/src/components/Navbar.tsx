@@ -135,69 +135,47 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // CHANGED: Handle search submission with scroll to products section
+  // Handle search submission
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
       onSearch(searchValue.trim());
-      
-      // Find and scroll to products section
-      setTimeout(() => {
-        // Try to find products section with common selectors
-        const productsSection = 
-          document.querySelector('.products-grid') ||
-          document.querySelector('.product-grid') ||
-          document.querySelector('[data-testid="products-grid"]') ||
-          document.querySelector('section.grid') ||
-          document.querySelector('.grid-cols-1') ||
-          document.querySelector('.grid-cols-2') ||
-          document.querySelector('.grid-cols-3') ||
-          document.querySelector('.grid-cols-4') ||
-          document.querySelector('main section:first-child') ||
-          document.querySelector('section');
-        
-        if (productsSection) {
-          productsSection.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
-          });
-        }
-      }, 100);
     }
   };
 
   // Dynamic text color based on scroll state
   const getTextColor = () => {
-    if (isScrolled) return 'text-white';
+    if (isScrolled) return 'text-gray-900';
     return 'text-white';
   };
 
   const getLogoColor = () => {
-    if (isScrolled) return 'text-white';
+    if (isScrolled) return 'text-brand-950';
     return 'text-white';
   };
 
   const getButtonHoverColor = () => {
-    if (isScrolled) return 'hover:bg-white/20';
+    if (isScrolled) return 'hover:bg-brand-100';
     return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
-    if (isScrolled) return 'text-white';
+    if (isScrolled) return 'text-brand-400';
     return 'text-white';
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = 'hover:text-white/80';
+  const hoverColor = isScrolled ? 'hover:text-brand-600' : 'hover:text-white/80';
   const buttonBgHover = getButtonHoverColor();
-  const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20';
-  const searchTextColor = 'text-white';
-  const searchPlaceholderColor = 'placeholder-white/70';
+  const searchBgColor = isScrolled ? 'bg-brand-50' : 'bg-white/20';
+  const searchTextColor = isScrolled ? 'text-gray-900' : 'text-white';
+  const searchPlaceholderColor = isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
   const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
+    if (isScrolled) return 'text-gray-900';
     return 'text-white';
   };
 
@@ -205,15 +183,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav
       ref={navbarRef}
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
-        'h-16 sm:h-20 flex items-center',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 py-3 sm:py-4',
         isScrolled 
-          ? 'glass bg-black/80 backdrop-blur-md shadow-md'
-          : 'bg-transparent',
-        'overflow-visible shrink-0'
+          ? 'glass py-2 sm:py-3 bg-white/80 backdrop-blur-md shadow-md' 
+          : 'bg-transparent'
       )}
     >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
@@ -401,11 +377,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* CHANGED: Mobile Menu - Added higher z-index to ensure it expands properly */}
+      {/* Mobile Menu - FIXED: Increased z-index to ensure full expansion */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop - semi-transparent black */}
+            {/* Backdrop - Increased z-index */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -415,7 +391,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed inset-0 backdrop-blur-sm z-[9999]"
             />
             
-            {/* Menu Panel - FORCED white background with higher z-index */}
+            {/* Menu Panel - Increased z-index */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
