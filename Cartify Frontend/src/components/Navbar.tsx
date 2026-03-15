@@ -60,6 +60,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   }, [isSearchOpen]);
 
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobileMenuOpen]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value);
     onSearch(e.target.value);
@@ -85,6 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleLinkClick = (e: React.MouseEvent, label: string) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
 
     if (label === 'Shop' || label === 'Shop All') {
       navigate('/');
@@ -163,9 +176,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav
       ref={navbarRef}
       className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 py-3 sm:py-4',
         isScrolled 
-          ? 'glass py-3 bg-white/80 backdrop-blur-md shadow-md' 
+          ? 'glass py-2 sm:py-3 bg-white/80 backdrop-blur-md shadow-md' 
           : 'bg-transparent'
       )}
     >
@@ -180,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => setIsMobileMenuOpen(true)}
           aria-label="Open menu"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         {/* Logo - Center on mobile, left on desktop */}
@@ -188,7 +201,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Link
             to="/"
             className={cn(
-              "text-2xl font-serif font-bold tracking-tighter transition-colors duration-300",
+              "text-xl sm:text-2xl font-serif font-bold tracking-tighter transition-colors duration-300",
               logoColor
             )}
           >
@@ -197,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center space-x-8 text-sm font-medium uppercase tracking-widest">
+        <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 text-xs xl:text-sm font-medium uppercase tracking-widest">
           <a
             href="#"
             onClick={(e) => handleLinkClick(e, 'Shop')}
@@ -229,17 +242,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Actions - Consistent styling for all devices */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
           {/* Search input - Now visible on all devices when open */}
           <form 
             onSubmit={handleSearchSubmit}
             className={cn(
-              "flex items-center rounded-full px-4 py-1 transition-all duration-300",
+              "flex items-center rounded-full px-3 sm:px-4 py-1 transition-all duration-300",
               searchBgColor,
-              isSearchOpen ? "w-32 sm:w-48 md:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
+              isSearchOpen ? "w-28 sm:w-48 md:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
             )}
           >
-            <Search className={cn("w-4 h-4 mr-2 flex-shrink-0", iconColor)} />
+            <Search className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0", iconColor)} />
             <input
               ref={searchInputRef}
               type="text"
@@ -256,10 +269,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="ml-2 p-1 rounded-full bg-brand-100 hover:bg-brand-200 transition-colors flex-shrink-0"
+                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-brand-100 hover:bg-brand-200 transition-colors flex-shrink-0"
                 aria-label="Clear search"
               >
-                <X className="w-3 h-3 text-brand-600" />
+                <X className="w-2 h-2 sm:w-3 sm:h-3 text-brand-600" />
               </button>
             )}
           </form>
@@ -267,22 +280,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Search toggle button - Visible on all devices */}
           <button
             onClick={handleSearchToggle}
-            className={cn("p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
             aria-label="Toggle search"
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           {/* Wishlist link */}
           <Link
             to="/wishlist"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={cn("p-2 rounded-full transition-colors relative hidden sm:block", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative hidden sm:block", buttonBgHover, textColor)}
             aria-label="Wishlist"
           >
-            <Heart className="w-5 h-5" />
+            <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
             {wishlistCount > 0 && (
-              <span className="absolute top-0 right-0 text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
                 {wishlistCount}
               </span>
             )}
@@ -292,10 +305,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative">
             <button
               onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
-              className={cn("p-2 rounded-full transition-colors hidden sm:block", buttonBgHover, textColor)}
+              className={cn("p-1.5 sm:p-2 rounded-full transition-colors hidden sm:block", buttonBgHover, textColor)}
               aria-label="User menu"
             >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
             <AnimatePresence>
@@ -304,19 +317,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
+                  className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
                 >
                   <div className="px-4 py-2 border-b border-brand-100">
-                    <p className="text-xs font-bold text-brand-400 uppercase tracking-widest">Signed in as</p>
-                    <p className="text-sm font-medium truncate text-gray-900">{user.email}</p>
+                    <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest">Signed in as</p>
+                    <p className="text-xs sm:text-sm font-medium truncate text-gray-900">{user.email}</p>
                   </div>
 
                   <Link
                     to="/my-orders"
-                    className="flex items-center px-4 py-2 text-sm text-gray-900 hover:bg-brand-50 transition-colors"
+                    className="flex items-center px-4 py-2 text-xs sm:text-sm text-gray-900 hover:bg-brand-50 transition-colors"
                     onClick={() => setIsUserMenuOpen(false)}
                   >
-                    <Package className="w-4 h-4 mr-2 text-brand-400" />
+                    <Package className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-brand-400" />
                     My Orders
                   </Link>
 
@@ -325,26 +338,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setIsUserMenuOpen(false);
                       showToast('Profile settings coming soon!');
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-900 hover:bg-brand-50 transition-colors"
+                    className="w-full text-left px-4 py-2 text-xs sm:text-sm text-gray-900 hover:bg-brand-50 transition-colors"
                   >
                     Profile Settings
                   </button>
-
-                  <Link
-                    to="/wishlist"
-                    className="flex items-center px-4 py-2 text-sm text-gray-900 hover:bg-brand-50 transition-colors lg:hidden"
-                    onClick={() => setIsUserMenuOpen(false)}
-                  >
-                    <Heart className="w-4 h-4 mr-2 text-brand-400" />
-                    Wishlist ({wishlistCount})
-                  </Link>
 
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
                       onLogout();
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    className="w-full text-left px-4 py-2 text-xs sm:text-sm text-red-500 hover:bg-red-50 transition-colors"
                   >
                     Logout
                   </button>
@@ -356,12 +360,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Cart button */}
           <button
             onClick={onCartClick}
-            className={cn("p-2 rounded-full transition-colors relative", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative", buttonBgHover, textColor)}
             aria-label="Shopping cart"
           >
-            <ShoppingBag className="w-5 h-5" />
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             {cartCount > 0 && (
-              <span className="absolute top-0 right-0 text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
                 {cartCount}
               </span>
             )}
@@ -385,102 +389,118 @@ export const Navbar: React.FC<NavbarProps> = ({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[80%] max-w-sm bg-white z-[70] p-8 shadow-2xl"
+              className="fixed top-0 left-0 bottom-0 w-[85%] sm:w-[80%] max-w-sm bg-white z-[70] p-6 sm:p-8 shadow-2xl overflow-y-auto"
             >
-              <div className="flex justify-between items-center mb-12">
-                <span className="text-2xl font-serif font-bold tracking-tighter text-brand-950">CARTIFY</span>
+              <div className="flex justify-between items-center mb-8 sm:mb-12">
+                <span className="text-xl sm:text-2xl font-serif font-bold tracking-tighter text-brand-950">CARTIFY</span>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)} 
-                  className="text-gray-900 p-2 hover:bg-brand-50 rounded-full transition-colors"
+                  className="p-1.5 sm:p-2 text-gray-900 hover:bg-brand-50 rounded-full transition-colors"
                   aria-label="Close menu"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
               
-              <div className="flex flex-col space-y-6">
+              {/* User info section - Mobile only */}
+              {user && (
+                <div className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-brand-100">
+                  <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Signed in as</p>
+                  <p className="text-sm sm:text-base font-medium text-gray-900 truncate">{user.email}</p>
+                </div>
+              )}
+              
+              <div className="flex flex-col space-y-4 sm:space-y-6">
                 <a
                   href="#"
                   onClick={(e) => handleLinkClick(e, 'Shop All')}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   Shop All
                 </a>
                 <Link
                   to="/new-arrivals"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   New Arrivals
                 </Link>
                 <a
                   href="#"
                   onClick={(e) => handleLinkClick(e, 'Best Sellers')}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   Best Sellers
                 </a>
                 <Link
                   to="/sustainability"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   Sustainability
                 </Link>
                 <Link
                   to="/my-orders"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   My Orders
+                </Link>
+                <Link
+                  to="/wishlist"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="sm:hidden flex items-center justify-between text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
+                >
+                  <span>Wishlist</span>
+                  {wishlistCount > 0 && (
+                    <span className="bg-brand-950 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                      {wishlistCount}
+                    </span>
+                  )}
                 </Link>
                 <a
                   href="#"
                   onClick={(e) => handleLinkClick(e, 'Our Story')}
-                  className="text-gray-900 hover:text-brand-600 transition-colors cursor-pointer text-lg font-medium"
+                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
                 >
                   Our Story
                 </a>
               </div>
 
-              <div className="absolute bottom-8 left-8 right-8 pt-8 border-t border-brand-100">
-                {user ? (
-                  <>
-                    <div className="mb-4">
-                      <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Signed in as</p>
-                      <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full text-left py-2 px-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-lg font-medium"
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
+              <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-brand-100">
+                {!user && (
                   <div
                     onClick={() => {
                       onAuthClick();
                       setIsMobileMenuOpen(false);
                     }}
-                    className="flex items-center space-x-4 mb-6 cursor-pointer text-gray-900 hover:text-brand-600 transition-colors"
+                    className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-6 cursor-pointer text-gray-900 hover:text-brand-600 hover:pl-2 transition-all"
                   >
-                    <User className="w-5 h-5" />
-                    <span className="text-lg font-medium">Sign In / Register</span>
+                    <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-sm sm:text-base font-medium">Sign In / Register</span>
                   </div>
                 )}
                 
                 {/* Mobile search option */}
                 <div
                   onClick={handleMobileSearchClick}
-                  className="flex items-center space-x-4 cursor-pointer text-gray-900 hover:text-brand-600 transition-colors"
+                  className="flex items-center space-x-3 sm:space-x-4 cursor-pointer text-gray-900 hover:text-brand-600 hover:pl-2 transition-all"
                 >
-                  <Search className="w-5 h-5" />
-                  <span className="text-lg font-medium">Search</span>
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-sm sm:text-base font-medium">Search</span>
                 </div>
+
+                {user && (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left mt-6 sm:mt-8 py-2 px-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm sm:text-base font-medium"
+                  >
+                    Logout
+                  </button>
+                )}
               </div>
             </motion.div>
           </>
