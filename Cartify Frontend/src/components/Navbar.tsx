@@ -203,16 +203,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <nav
-  ref={navbarRef}
-  className={cn(
-    'fixed top-0 left-0 right-0 z-[20000] transition-all duration-300 px-4 sm:px-6',
-    'h-16 sm:h-20 flex items-center',
-    isScrolled 
-      ? 'glass bg-black/80 backdrop-blur-md shadow-md'
-      : 'bg-transparent',
-    'overflow-visible shrink-0'
-        )}
-            >
+      ref={navbarRef}
+      className={cn(
+        'fixed top-0 left-0 right-0 z-[20000] transition-all duration-300 px-4 sm:px-6',
+        'h-16 sm:h-20 flex items-center',
+        isScrolled 
+          ? 'glass bg-black/80 backdrop-blur-md shadow-md'
+          : 'bg-transparent',
+        'overflow-visible shrink-0'
+      )}
+    >
       <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
         {/* Mobile Menu Toggle */}
         <button
@@ -400,19 +400,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* CHANGED: Mobile Menu - Added higher z-index to ensure it expands properly */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
             {/* Backdrop - semi-transparent black */}
             <motion.div
-               initial={{ x: '-100%' }}
-                   animate={{ x: 0 }}
-                 exit={{ x: '-100%' }}
-                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                 style={{ backgroundColor: '#ffffff' }}
-                className="fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col min-h-screen"
-                >
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+              className="fixed inset-0 backdrop-blur-sm z-[99999]"
+            />
             
             {/* Menu Panel - FORCED white background with higher z-index */}
             <motion.div
