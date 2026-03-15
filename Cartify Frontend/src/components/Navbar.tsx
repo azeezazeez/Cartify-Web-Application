@@ -39,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [searchValue, setSearchValue] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -52,6 +53,13 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Focus search input when opened
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value);
     onSearch(e.target.value);
@@ -60,6 +68,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleClearSearch = () => {
     setSearchValue('');
     onSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen);
+    // Clear search when closing
+    if (isSearchOpen) {
+      setSearchValue('');
+      onSearch('');
+    }
   };
 
   const handleLinkClick = (e: React.MouseEvent, label: string) => {
@@ -84,8 +104,25 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  // Handle mobile search click
+  const handleMobileSearchClick = () => {
+    setIsMobileMenuOpen(false);
+    setIsSearchOpen(true);
+    // Focus will happen via useEffect
+  };
+
+  // Handle search submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchValue.trim()) {
+      onSearch(searchValue.trim());
+      // Optionally navigate to search results page
+      // navigate(`/search?q=${encodeURIComponent(searchValue)}`);
+    }
+  };
+
   // Consistent colors for all devices
-  const textColor = 'text-gray-900'; // Removed dark mode class for consistency
+  const textColor = 'text-gray-900';
   const logoColor = 'text-brand-950';
   const hoverColor = 'hover:text-brand-600';
   const buttonBgHover = 'hover:bg-brand-100';
@@ -94,11 +131,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const searchPlaceholderColor = 'placeholder-gray-500';
   const iconColor = 'text-brand-400';
 
-  // Determine toggle button color based on scroll state and mobile menu state
   const getToggleButtonColor = () => {
-    if (isMobileMenuOpen) return 'text-gray-900'; // Always dark when menu is open
-    if (isScrolled) return 'text-gray-900'; // Dark when scrolled
-    return 'text-gray-900'; // Always dark for consistency (remove white condition)
+    if (isMobileMenuOpen) return 'text-gray-900';
+    if (isScrolled) return 'text-gray-900';
+    return 'text-gray-900';
   };
 
   return (
@@ -171,13 +207,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Actions - Consistent styling for all devices */}
         <div className="flex items-center space-x-2 sm:space-x-4">
           {/* Search input - Hidden on mobile when closed */}
-          <div className={cn(
-            "hidden sm:flex items-center rounded-full px-4 py-1 transition-all duration-300",
-            searchBgColor,
-            isSearchOpen ? "w-48 sm:w-64 opacity-100" : "w-0 opacity-0 overflow-hidden px-0"
-          )}>
+          <form 
+            onSubmit={handleSearchSubmit}
+            className={cn(
+              "hidden sm:flex items-center rounded-full px-4 py-1 transition-all duration-300",
+              searchBgColor,
+              isSearchOpen ? "w-48 sm:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
+            )}
+          >
             <Search className={cn("w-4 h-4 mr-2 flex-shrink-0", iconColor)} />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="Search..."
               value={searchValue}
@@ -190,17 +230,18 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
             {searchValue && (
               <button
+                type="button"
                 onClick={handleClearSearch}
                 className={cn("ml-2 p-1 rounded-full hover:bg-black/10 transition-colors flex-shrink-0")}
               >
                 <X className={cn("w-3 h-3", iconColor)} />
               </button>
             )}
-          </div>
+          </form>
 
           {/* Search toggle button - Visible on all devices */}
           <button
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            onClick={handleSearchToggle}
             className={cn("p-2 rounded-full transition-colors", buttonBgHover, textColor)}
             aria-label="Toggle search"
           >
@@ -409,10 +450,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 
                 {/* Mobile search option */}
                 <div
-                  onClick={() => {
-                    setIsSearchOpen(true);
-                    setIsMobileMenuOpen(false);
-                  }}
+                  onClick={handleMobileSearchClick}
                   className="flex items-center space-x-4 cursor-pointer text-gray-900 hover:text-brand-600 transition-colors"
                 >
                   <Search className="w-5 h-5" />
