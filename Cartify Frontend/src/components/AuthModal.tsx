@@ -1,122 +1,44 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, ArrowRight, Github, Chrome, Loader2 } from 'lucide-react';
-import { api } from '../services/api';
-
-// Define proper types
-type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
-type ToastType = 'success' | 'info' | 'error';
+import { api } from '../services/api'; // Adjust the import path as needed
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  showToast: (text: string, type?: ToastType) => void;
+  showToast: (text: string, type?: 'success' | 'info' | 'error') => void;
   onLoginSuccess: (user: any) => void;
 }
 
-interface FormData {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-  otp: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}
+export const AuthModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
 
-interface ApiResponse {
-  success?: boolean;
-  data?: any;
-  user?: any;
-  id?: string;
-  message?: string;
-  error?: string;
-}
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[20000]"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white p-6 rounded-xl w-[350px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 text-gray-600 hover:text-black"
+        >
+          ✕
+        </button>
 
-interface MessageEventData {
-  type: 'AUTH_SUCCESS' | 'AUTH_ERROR';
-  user?: any;
-  message?: string;
-}
+        <h2 className="text-xl font-semibold mb-4">Sign In</h2>
 
-export const AuthModal: React.FC<AuthModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  showToast, 
-  onLoginSuccess 
-}) => {
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    otp: '',
-    newPassword: '',
-    confirmNewPassword: ''
-  });
-
-  // Use ref for cleanup
-  const popupRef = useRef<Window | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout>();
-
-  // Cleanup function for social login
-  const cleanupSocialLogin = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    setIsLoading(false);
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      cleanupSocialLogin();
-    };
-  }, [cleanupSocialLogin]);
-
-  // Reset form when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        otp: '',
-        newPassword: '',
-        confirmNewPassword: ''
-      });
-      setMode('login');
-    }
-  }, [isOpen]);
-
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePassword = (password: string): boolean => {
-    return password.length >= 6;
-  };
+      </div>
+    </div>
+  );
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!validateEmail(formData.email)) {
-      showToast('Please enter a valid email address', 'error');
-      return;
-    }
-
-    if (mode === 'login' || mode === 'register') {
-      if (!validatePassword(formData.password)) {
-        showToast('Password must be at least 6 characters long', 'error');
-        return;
-      }
-    }
-
     setIsLoading(true);
 
     try {
@@ -125,29 +47,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Passwords do not match');
         }
 
-        const userData = {
-          email: formData.email.trim(),
+        // Log the data being sent
+        console.log('Sending registration data:', {
+          email: formData.email,
           password: formData.password,
-          username: formData.name.trim(),
+          username: formData.name,
+          role: 'USER'
+        });
+
+        const userData = {
+          email: formData.email,
+          password: formData.password,
+          username: formData.name,
           role: 'USER'
         };
 
-        const response = await api.register(userData) as ApiResponse;
+        const response = await api.register(userData);
+
+        // Log the response for debugging
+        console.log('Registration response:', response);
 
         // Check different possible success indicators
         if (response?.success || response?.data || response?.user || response?.id) {
           showToast('Registration successful! You can now sign in.', 'success');
 
-          // Clear sensitive form data but keep email
+          // Clear sensitive form data
           setFormData(prev => ({
             ...prev,
             password: '',
-            confirmPassword: '',
-            name: '' // Clear name for security
+            confirmPassword: ''
           }));
 
+          // Switch to login mode
           setMode('login');
+
+          // Optional: Auto-fill email for convenience
+          // setFormData(prev => ({ ...prev, email: formData.email }));
         } else {
+          // If response has a message, show it
           const errorMessage = response?.message || response?.error || 'Registration failed';
           throw new Error(errorMessage);
         }
@@ -157,18 +94,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Please enter email and password');
         }
 
+        console.log('Sending login data:', {
+          email: formData.email,
+          password: formData.password
+        });
+
         const credentials = {
-          email: formData.email.trim(),
+          email: formData.email,
           password: formData.password
         };
 
-        const response = await api.login(credentials) as ApiResponse;
+        const response = await api.login(credentials);
+
+        console.log('Login response:', response);
 
         if (response?.user) {
           showToast('Login successful!', 'success');
           onLoginSuccess(response.user);
 
-          // Clear form
+          // Clear form and close modal
           setFormData({
             name: '',
             email: '',
@@ -188,7 +132,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Please enter your email');
         }
 
-        await api.generateOtp(formData.email.trim());
+        await api.generateOtp(formData.email);
         showToast('OTP sent to your email!', 'success');
         setMode('reset-password');
 
@@ -197,16 +141,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Passwords do not match');
         }
 
-        if (!validatePassword(formData.newPassword)) {
-          throw new Error('Password must be at least 6 characters long');
-        }
-
-        if (!formData.otp || formData.otp.length !== 6 || !/^\d+$/.test(formData.otp)) {
+        if (!formData.otp || formData.otp.length !== 6) {
           throw new Error('Please enter a valid 6-digit OTP');
         }
 
         await api.resetPassword({
-          email: formData.email.trim(),
+          email: formData.email,
           otp: formData.otp,
           newPassword: formData.newPassword
         });
@@ -215,7 +155,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setMode('login');
         setFormData({
           name: '',
-          email: formData.email, // Keep email for convenience
+          email: '',
           password: '',
           confirmPassword: '',
           otp: '',
@@ -232,21 +172,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    
-    // Special handling for OTP - only allow digits
-    if (name === 'otp') {
-      const digitsOnly = value.replace(/\D/g, '');
-      setFormData(prev => ({
-        ...prev,
-        [name]: digitsOnly
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
@@ -258,124 +187,60 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
 
-      const apiUrl = process.env.REACT_APP_API_URL;
-      if (!apiUrl) {
-        throw new Error('API URL not configured');
-      }
-
-      popupRef.current = window.open(
-        `${apiUrl}/auth/${provider}`,
+      const popup = window.open(
+        `${process.env.REACT_APP_API_URL}/auth/${provider}`,
         `${provider} Auth`,
-        `width=${width},height=${height},left=${left},top=${top},popup=1`
+        `width=${width},height=${height},left=${left},top=${top}`
       );
 
-      if (!popupRef.current) {
-        throw new Error('Popup was blocked. Please allow popups for this site.');
-      }
+      const messageHandler = (event: MessageEvent) => {
+        if (event.origin !== process.env.REACT_APP_API_URL) return;
 
-      const messageHandler = (event: MessageEvent<MessageEventData>) => {
-        // Validate origin
-        if (event.origin !== apiUrl) return;
-
-        const { data } = event;
-        
-        if (data.type === 'AUTH_SUCCESS' && data.user) {
-          onLoginSuccess(data.user);
+        if (event.data.type === 'AUTH_SUCCESS' && event.data.user) {
+          onLoginSuccess(event.data.user);
           onClose();
           showToast(`Successfully logged in with ${provider}!`, 'success');
-          cleanupSocialLogin();
-          popupRef.current?.close();
-        } else if (data.type === 'AUTH_ERROR') {
-          showToast(data.message || `${provider} login failed`, 'error');
-          cleanupSocialLogin();
-          popupRef.current?.close();
+          window.removeEventListener('message', messageHandler);
+          popup?.close();
+        } else if (event.data.type === 'AUTH_ERROR') {
+          showToast(event.data.message || `${provider} login failed`, 'error');
+          window.removeEventListener('message', messageHandler);
+          popup?.close();
         }
       };
 
       window.addEventListener('message', messageHandler);
 
-      // Check if popup is closed
-      intervalRef.current = setInterval(() => {
-        if (popupRef.current?.closed) {
-          cleanupSocialLogin();
+      const checkPopupClosed = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkPopupClosed);
           window.removeEventListener('message', messageHandler);
+          setIsLoading(false);
         }
       }, 1000);
 
-      // Cleanup after 5 minutes maximum
-      setTimeout(() => {
-        cleanupSocialLogin();
-        window.removeEventListener('message', messageHandler);
-        popupRef.current?.close();
-      }, 300000); // 5 minutes
-
     } catch (error) {
-      console.error('Social login error:', error);
-      showToast(error instanceof Error ? error.message : `${provider} login failed`, 'error');
-      cleanupSocialLogin();
+      showToast(`${provider} login failed`, 'error');
+      setIsLoading(false);
     }
   };
 
-  const getTitle = (): string => {
+  const getTitle = () => {
     switch (mode) {
       case 'login': return 'Welcome Back';
       case 'register': return 'Create Account';
       case 'forgot-password': return 'Forgot Password';
       case 'reset-password': return 'Reset Password';
-      default: return 'Authentication';
     }
   };
 
-  const getSubtitle = (): string => {
+  const getSubtitle = () => {
     switch (mode) {
       case 'login': return 'Enter your details to access your account';
       case 'register': return 'Join cartify for a premium shopping experience';
       case 'forgot-password': return 'Enter your email to receive a password reset OTP';
       case 'reset-password': return 'Enter the OTP sent to your email and your new password';
-      default: return '';
     }
-  };
-
-  const getButtonText = (): string => {
-    switch (mode) {
-      case 'login': return 'Sign In';
-      case 'register': return 'Create Account';
-      case 'forgot-password': return 'Send OTP';
-      case 'reset-password': return 'Reset Password';
-      default: return 'Submit';
-    }
-  };
-
-  const handleModeSwitch = () => {
-    if (mode === 'login') {
-      setMode('register');
-    } else if (mode === 'register') {
-      setMode('login');
-    } else {
-      setMode('login');
-    }
-    
-    // Clear sensitive data when switching modes
-    setFormData(prev => ({
-      ...prev,
-      password: '',
-      confirmPassword: '',
-      otp: '',
-      newPassword: '',
-      confirmNewPassword: ''
-    }));
-  };
-
-  const handleBackToLogin = () => {
-    setMode('login');
-    setFormData(prev => ({
-      ...prev,
-      password: '',
-      confirmPassword: '',
-      otp: '',
-      newPassword: '',
-      confirmNewPassword: ''
-    }));
   };
 
   return (
@@ -393,14 +258,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            transition={{ type: 'spring', duration: 0.3 }}
             className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[210] rounded-3xl overflow-hidden shadow-2xl p-8"
           >
             <button
               onClick={onClose}
-              disabled={isLoading}
-              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors disabled:opacity-50"
-              aria-label="Close modal"
+              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -414,7 +276,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </p>
             </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               {mode === 'register' && (
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
@@ -425,10 +287,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Full Name"
-                    disabled={isLoading}
-                    minLength={2}
-                    maxLength={50}
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                   />
                 </div>
               )}
@@ -444,8 +303,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Email Address"
-                    disabled={isLoading}
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50 read-only:opacity-50"
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
@@ -461,10 +319,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.otp}
                     onChange={handleChange}
                     placeholder="Enter 6-digit OTP"
-                    disabled={isLoading}
-                    inputMode="numeric"
-                    pattern="\d*"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                   />
                 </div>
               )}
@@ -479,9 +334,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Password"
-                    disabled={isLoading}
-                    minLength={6}
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                   />
                 </div>
               )}
@@ -496,9 +349,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm Password"
-                    disabled={isLoading}
-                    minLength={6}
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                   />
                 </div>
               )}
@@ -514,9 +365,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       value={formData.newPassword}
                       onChange={handleChange}
                       placeholder="New Password"
-                      disabled={isLoading}
-                      minLength={6}
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                     />
                   </div>
                   <div className="relative">
@@ -528,9 +377,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       value={formData.confirmNewPassword}
                       onChange={handleChange}
                       placeholder="Confirm New Password"
-                      disabled={isLoading}
-                      minLength={6}
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                     />
                   </div>
                 </>
@@ -541,8 +388,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setMode('forgot-password')}
-                    disabled={isLoading}
-                    className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest disabled:opacity-50"
+                    className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest"
                   >
                     Forgot Password?
                   </button>
@@ -552,16 +398,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-2 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-2 hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
               >
                 {isLoading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Processing...</span>
-                  </>
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    <span>{getButtonText()}</span>
+                    <span>
+                      {mode === 'login' ? 'Sign In' :
+                        mode === 'register' ? 'Create Account' :
+                          mode === 'forgot-password' ? 'Send OTP' : 'Reset Password'}
+                    </span>
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
@@ -584,7 +431,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="button"
                     onClick={() => handleSocialLogin('google')}
                     disabled={isLoading}
-                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50"
                   >
                     <Chrome className="w-5 h-5" />
                     <span className="text-sm font-medium">Google</span>
@@ -593,7 +440,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     type="button"
                     onClick={() => handleSocialLogin('github')}
                     disabled={isLoading}
-                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50"
                   >
                     <Github className="w-5 h-5" />
                     <span className="text-sm font-medium">GitHub</span>
@@ -604,17 +451,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
             <p className="mt-8 text-center text-sm text-brand-500">
               {mode === 'login' ? "Don't have an account?" :
-               mode === 'register' ? "Already have an account?" :
-               mode === 'forgot-password' || mode === 'reset-password' ? "Remember your password?" : ''}{' '}
+                mode === 'register' ? "Already have an account?" :
+                  "Remember your password?"}{' '}
               <button
                 type="button"
-                onClick={mode === 'forgot-password' || mode === 'reset-password' ? handleBackToLogin : handleModeSwitch}
-                disabled={isLoading}
-                className="font-bold text-brand-950 dark:text-white hover:underline disabled:opacity-50"
+                onClick={() => {
+                  setMode(mode === 'register' ? 'login' : mode === 'login' ? 'register' : 'login');
+                  setFormData(prev => ({
+                    ...prev,
+                    password: '',
+                    confirmPassword: '',
+                    otp: '',
+                    newPassword: '',
+                    confirmNewPassword: ''
+                  }));
+                }}
+                className="font-bold text-brand-950 dark:text-white hover:underline"
               >
-                {mode === 'login' ? 'Sign Up' : 
-                 mode === 'register' ? 'Sign In' : 
-                 'Sign In'}
+                {mode === 'login' ? 'Sign Up' : 'Sign In'}
               </button>
             </p>
           </motion.div>
