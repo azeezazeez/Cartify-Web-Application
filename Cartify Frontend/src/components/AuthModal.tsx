@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, ArrowRight, Github, Chrome, Loader2 } from 'lucide-react';
-import { api } from '../services/api'; // Adjust the import path as needed
+import { api } from '../services/api';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -10,32 +10,23 @@ interface AuthModalProps {
   onLoginSuccess: (user: any) => void;
 }
 
-export const AuthModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[20000]"
-      onClick={onClose}
-    >
-      <div
-        className="relative bg-white p-6 rounded-xl w-[350px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-600 hover:text-black"
-        >
-          ✕
-        </button>
-
-        <h2 className="text-xl font-semibold mb-4">Sign In</h2>
-
-      </div>
-    </div>
-  );
-};
+export const AuthModal: React.FC<AuthModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  showToast, 
+  onLoginSuccess 
+}) => {
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    otp: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,16 +35,10 @@ export const AuthModal = ({ isOpen, onClose }) => {
     try {
       if (mode === 'register') {
         if (formData.password !== formData.confirmPassword) {
-          throw new Error('Passwords do not match');
+          showToast('Passwords do not match', 'error');
+          setIsLoading(false);
+          return;
         }
-
-        // Log the data being sent
-        console.log('Sending registration data:', {
-          email: formData.email,
-          password: formData.password,
-          username: formData.name,
-          role: 'USER'
-        });
 
         const userData = {
           email: formData.email,
@@ -63,41 +48,23 @@ export const AuthModal = ({ isOpen, onClose }) => {
         };
 
         const response = await api.register(userData);
-
-        // Log the response for debugging
-        console.log('Registration response:', response);
-
-        // Check different possible success indicators
-        if (response?.success || response?.data || response?.user || response?.id) {
+        
+        if (response) {
           showToast('Registration successful! You can now sign in.', 'success');
-
-          // Clear sensitive form data
           setFormData(prev => ({
             ...prev,
             password: '',
             confirmPassword: ''
           }));
-
-          // Switch to login mode
           setMode('login');
-
-          // Optional: Auto-fill email for convenience
-          // setFormData(prev => ({ ...prev, email: formData.email }));
-        } else {
-          // If response has a message, show it
-          const errorMessage = response?.message || response?.error || 'Registration failed';
-          throw new Error(errorMessage);
         }
 
       } else if (mode === 'login') {
         if (!formData.email || !formData.password) {
-          throw new Error('Please enter email and password');
+          showToast('Please enter email and password', 'error');
+          setIsLoading(false);
+          return;
         }
-
-        console.log('Sending login data:', {
-          email: formData.email,
-          password: formData.password
-        });
 
         const credentials = {
           email: formData.email,
@@ -106,13 +73,9 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
         const response = await api.login(credentials);
 
-        console.log('Login response:', response);
-
         if (response?.user) {
           showToast('Login successful!', 'success');
           onLoginSuccess(response.user);
-
-          // Clear form and close modal
           setFormData({
             name: '',
             email: '',
@@ -124,12 +87,14 @@ export const AuthModal = ({ isOpen, onClose }) => {
           });
           onClose();
         } else {
-          throw new Error('Login failed - no user data received');
+          showToast('Login failed', 'error');
         }
 
       } else if (mode === 'forgot-password') {
         if (!formData.email) {
-          throw new Error('Please enter your email');
+          showToast('Please enter your email', 'error');
+          setIsLoading(false);
+          return;
         }
 
         await api.generateOtp(formData.email);
@@ -138,11 +103,15 @@ export const AuthModal = ({ isOpen, onClose }) => {
 
       } else if (mode === 'reset-password') {
         if (formData.newPassword !== formData.confirmNewPassword) {
-          throw new Error('Passwords do not match');
+          showToast('Passwords do not match', 'error');
+          setIsLoading(false);
+          return;
         }
 
         if (!formData.otp || formData.otp.length !== 6) {
-          throw new Error('Please enter a valid 6-digit OTP');
+          showToast('Please enter a valid 6-digit OTP', 'error');
+          setIsLoading(false);
+          return;
         }
 
         await api.resetPassword({
@@ -155,7 +124,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
         setMode('login');
         setFormData({
           name: '',
-          email: '',
+          email: formData.email,
           password: '',
           confirmPassword: '',
           otp: '',
@@ -165,7 +134,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
       }
     } catch (error) {
       console.error('Auth error:', error);
-      showToast(error instanceof Error ? error.message : 'Authentication failed', 'error');
+      showToast('Authentication failed. Please try again.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -179,50 +148,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
-    try {
-      setIsLoading(true);
-
-      const width = 600;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-
-      const popup = window.open(
-        `${process.env.REACT_APP_API_URL}/auth/${provider}`,
-        `${provider} Auth`,
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      const messageHandler = (event: MessageEvent) => {
-        if (event.origin !== process.env.REACT_APP_API_URL) return;
-
-        if (event.data.type === 'AUTH_SUCCESS' && event.data.user) {
-          onLoginSuccess(event.data.user);
-          onClose();
-          showToast(`Successfully logged in with ${provider}!`, 'success');
-          window.removeEventListener('message', messageHandler);
-          popup?.close();
-        } else if (event.data.type === 'AUTH_ERROR') {
-          showToast(event.data.message || `${provider} login failed`, 'error');
-          window.removeEventListener('message', messageHandler);
-          popup?.close();
-        }
-      };
-
-      window.addEventListener('message', messageHandler);
-
-      const checkPopupClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkPopupClosed);
-          window.removeEventListener('message', messageHandler);
-          setIsLoading(false);
-        }
-      }, 1000);
-
-    } catch (error) {
-      showToast(`${provider} login failed`, 'error');
-      setIsLoading(false);
-    }
+    showToast(`${provider} login coming soon!`, 'info');
   };
 
   const getTitle = () => {
@@ -231,6 +157,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
       case 'register': return 'Create Account';
       case 'forgot-password': return 'Forgot Password';
       case 'reset-password': return 'Reset Password';
+      default: return '';
     }
   };
 
@@ -240,7 +167,27 @@ export const AuthModal = ({ isOpen, onClose }) => {
       case 'register': return 'Join cartify for a premium shopping experience';
       case 'forgot-password': return 'Enter your email to receive a password reset OTP';
       case 'reset-password': return 'Enter the OTP sent to your email and your new password';
+      default: return '';
     }
+  };
+
+  const handleModeSwitch = () => {
+    if (mode === 'login') {
+      setMode('register');
+    } else if (mode === 'register') {
+      setMode('login');
+    } else {
+      setMode('login');
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      password: '',
+      confirmPassword: '',
+      otp: '',
+      newPassword: '',
+      confirmNewPassword: ''
+    }));
   };
 
   return (
@@ -287,7 +234,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Full Name"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                    disabled={isLoading}
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
@@ -303,6 +251,7 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Email Address"
+                    disabled={isLoading}
                     className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
@@ -319,7 +268,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     value={formData.otp}
                     onChange={handleChange}
                     placeholder="Enter 6-digit OTP"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                    disabled={isLoading}
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
@@ -334,7 +284,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Password"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                    disabled={isLoading}
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
@@ -349,7 +300,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     placeholder="Confirm Password"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                    disabled={isLoading}
+                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                   />
                 </div>
               )}
@@ -365,7 +317,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                       value={formData.newPassword}
                       onChange={handleChange}
                       placeholder="New Password"
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                      disabled={isLoading}
+                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                     />
                   </div>
                   <div className="relative">
@@ -377,7 +330,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                       value={formData.confirmNewPassword}
                       onChange={handleChange}
                       placeholder="Confirm New Password"
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                      disabled={isLoading}
+                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
                     />
                   </div>
                 </>
@@ -388,7 +342,8 @@ export const AuthModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => setMode('forgot-password')}
-                    className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest"
+                    disabled={isLoading}
+                    className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest disabled:opacity-50"
                   >
                     Forgot Password?
                   </button>
@@ -455,20 +410,13 @@ export const AuthModal = ({ isOpen, onClose }) => {
                   "Remember your password?"}{' '}
               <button
                 type="button"
-                onClick={() => {
-                  setMode(mode === 'register' ? 'login' : mode === 'login' ? 'register' : 'login');
-                  setFormData(prev => ({
-                    ...prev,
-                    password: '',
-                    confirmPassword: '',
-                    otp: '',
-                    newPassword: '',
-                    confirmNewPassword: ''
-                  }));
-                }}
-                className="font-bold text-brand-950 dark:text-white hover:underline"
+                onClick={handleModeSwitch}
+                disabled={isLoading}
+                className="font-bold text-brand-950 dark:text-white hover:underline disabled:opacity-50"
               >
-                {mode === 'login' ? 'Sign Up' : 'Sign In'}
+                {mode === 'login' ? 'Sign Up' : 
+                 mode === 'register' ? 'Sign In' : 
+                 'Sign In'}
               </button>
             </p>
           </motion.div>
