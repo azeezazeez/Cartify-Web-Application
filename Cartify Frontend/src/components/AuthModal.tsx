@@ -28,6 +28,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
     confirmNewPassword: ''
   });
 
+  // Add ref for modal content to handle click propagation
+  const modalRef = useRef<HTMLDivElement>(null);
+
   // Add ref for message handler to use in cleanup
   const messageHandlerRef = useRef<(event: MessageEvent) => void>();
 
@@ -241,7 +244,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       case 'register': return 'Create Account';
       case 'forgot-password': return 'Forgot Password';
       case 'reset-password': return 'Reset Password';
-      default: return ''; // Add default return
+      default: return '';
     }
   };
 
@@ -251,8 +254,13 @@ const AuthModal: React.FC<AuthModalProps> = ({
       case 'register': return 'Join cartify for a premium shopping experience';
       case 'forgot-password': return 'Enter your email to receive a password reset OTP';
       case 'reset-password': return 'Enter the OTP sent to your email and your new password';
-      default: return ''; // Add default return
+      default: return '';
     }
+  };
+
+  // Handle click on modal content to prevent closing when clicking inside
+  const handleModalClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
 
   // Reset form when modal closes
@@ -284,14 +292,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
             className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100000]"
           />
           <motion.div
+            ref={modalRef}
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[210] rounded-3xl overflow-hidden shadow-2xl p-8"
+            onClick={handleModalClick}
+            className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[100001] rounded-3xl overflow-hidden shadow-2xl p-8"
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-[100002]"
               type="button"
             >
               <X className="w-6 h-6" />
