@@ -206,13 +206,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Actions - Consistent styling for all devices */}
         <div className="flex items-center space-x-2 sm:space-x-4">
-          {/* Search input - Hidden on mobile when closed */}
+          {/* Search input - Now visible on all devices when open */}
           <form 
             onSubmit={handleSearchSubmit}
             className={cn(
-              "hidden sm:flex items-center rounded-full px-4 py-1 transition-all duration-300",
+              "flex items-center rounded-full px-4 py-1 transition-all duration-300",
               searchBgColor,
-              isSearchOpen ? "w-48 sm:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
+              isSearchOpen ? "w-32 sm:w-48 md:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
             )}
           >
             <Search className={cn("w-4 h-4 mr-2 flex-shrink-0", iconColor)} />
@@ -252,7 +252,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Link
             to="/wishlist"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={cn("p-2 rounded-full transition-colors relative", buttonBgHover, textColor)}
+            className={cn("p-2 rounded-full transition-colors relative hidden sm:block", buttonBgHover, textColor)}
             aria-label="Wishlist"
           >
             <Heart className="w-5 h-5" />
