@@ -377,35 +377,38 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu - Pure white background with black text */}
+      {/* Mobile Menu - FORCED white background with black text */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop - semi-transparent black */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+              className="fixed inset-0 backdrop-blur-sm z-[60]"
             />
             
-            {/* Menu Panel - Pure white background */}
+            {/* Menu Panel - FORCED white background with inline style to override any theme */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] bg-white z-[70] shadow-2xl flex flex-col"
+              style={{ backgroundColor: '#ffffff' }}
+              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[70] shadow-2xl flex flex-col"
             >
               {/* Header - White background, dark text */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
-                <span className="text-xl font-serif font-bold tracking-tighter text-gray-900">
+              <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
+                <span style={{ color: '#111827' }} className="text-xl font-serif font-bold tracking-tighter">
                   CARTIFY
                 </span>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)} 
-                  className="p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                  style={{ color: '#374151' }}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   aria-label="Close menu"
                 >
                   <X className="w-5 h-5" />
@@ -413,51 +416,57 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               
               {/* Menu Items - Black text on white background */}
-              <div className="flex-1 overflow-y-auto py-6 px-6 bg-white">
+              <div style={{ backgroundColor: '#ffffff' }} className="flex-1 overflow-y-auto py-6 px-6">
                 <div className="flex flex-col space-y-1">
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Shop All')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     Shop All
                   </a>
                   <Link
                     to="/new-arrivals"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     New Arrivals
                   </Link>
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Best Sellers')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     Best Sellers
                   </a>
                   <Link
                     to="/sustainability"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     Sustainability
                   </Link>
                   <Link
                     to="/my-orders"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     My Orders
                   </Link>
                   <Link
                     to="/wishlist"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between"
                   >
                     <span>Wishlist</span>
                     {wishlistCount > 0 && (
-                      <span className="bg-brand-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      <span style={{ backgroundColor: '#059669', color: '#ffffff' }} className="text-xs font-bold px-2 py-1 rounded-full">
                         {wishlistCount}
                       </span>
                     )}
@@ -465,7 +474,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Our Story')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    style={{ color: '#111827' }}
+                    className="py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block"
                   >
                     Our Story
                   </a>
@@ -473,7 +483,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               {/* Footer Actions - White background, black text */}
-              <div className="border-t border-gray-200 p-6 bg-white">
+              <div style={{ backgroundColor: '#ffffff', borderTopColor: '#e5e7eb' }} className="border-t p-6">
                 <div className="flex flex-col space-y-3">
                   {!user ? (
                     <div
@@ -481,23 +491,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onAuthClick();
                         setIsMobileMenuOpen(false);
                       }}
-                      className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
+                      style={{ color: '#111827' }}
+                      className="flex items-center space-x-3 py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
                     >
-                      <User className="w-5 h-5 text-gray-700" />
+                      <User style={{ color: '#374151' }} className="w-5 h-5" />
                       <span className="text-base font-medium">Sign In / Register</span>
                     </div>
                   ) : (
                     <>
                       <div className="px-4 py-2">
-                        <p className="text-xs font-bold text-brand-500 uppercase tracking-widest mb-1">Signed in as</p>
-                        <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                        <p style={{ color: '#059669' }} className="text-xs font-bold uppercase tracking-widest mb-1">Signed in as</p>
+                        <p style={{ color: '#111827' }} className="text-sm font-medium truncate">{user.email}</p>
                       </div>
                       <button
                         onClick={() => {
                           setIsMobileMenuOpen(false);
                           onLogout();
                         }}
-                        className="flex items-center space-x-3 py-3 text-red-600 hover:bg-red-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                        style={{ color: '#dc2626' }}
+                        className="flex items-center space-x-3 py-3 hover:bg-red-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                       >
                         <span>Logout</span>
                       </button>
@@ -506,9 +518,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   
                   <div
                     onClick={handleMobileSearchClick}
-                    className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
+                    style={{ color: '#111827' }}
+                    className="flex items-center space-x-3 py-3 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
                   >
-                    <Search className="w-5 h-5 text-gray-700" />
+                    <Search style={{ color: '#374151' }} className="w-5 h-5" />
                     <span className="text-base font-medium">Search</span>
                   </div>
                 </div>
