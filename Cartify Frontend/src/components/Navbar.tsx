@@ -333,22 +333,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </Link>
 
           {/* User menu - Desktop only */}
-          <div className="relative hidden sm:block">
-            <button
-              onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
-              className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
-              aria-label="User menu"
-            >
-              <User className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
-            <AnimatePresence>
-              {isUserMenuOpen && user && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
-                >
+          <div className="relative">
+  <button
+    onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
+    className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+    aria-label="User menu"
+  >
+    <User className="w-4 h-4 sm:w-5 sm:h-5" />
+  </button>
+
+  <AnimatePresence>
+    {isUserMenuOpen && user && (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 10 }}
+        className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
+      >
                   <div className="px-4 py-2 border-b border-brand-100">
                     <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest">Signed in as</p>
                     <p className="text-xs sm:text-sm font-medium truncate text-gray-900">{user.email}</p>
