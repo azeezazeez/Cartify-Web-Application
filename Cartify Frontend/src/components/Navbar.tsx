@@ -341,7 +341,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
-
             <AnimatePresence>
               {isUserMenuOpen && user && (
                 <motion.div
@@ -407,13 +406,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <>
             {/* Backdrop - semi-transparent black */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              className="fixed inset-0 backdrop-blur-sm z-[99998]"
-            />
+               initial={{ x: '-100%' }}
+                   animate={{ x: 0 }}
+                 exit={{ x: '-100%' }}
+                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                 style={{ backgroundColor: '#ffffff' }}
+                className="fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col min-h-screen"
+                >
             
             {/* Menu Panel - FORCED white background with higher z-index */}
             <motion.div
