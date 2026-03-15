@@ -3,11 +3,31 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, ArrowRight, Github, Chrome, Loader2 } from 'lucide-react';
 import { api } from '../services/api'; // Adjust the import path as needed
 
+// Define types for better type safety
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'reset-password';
+type ToastType = 'success' | 'info' | 'error';
+
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  // Add other user properties as needed
+}
+
+interface AuthResponse {
+  success?: boolean;
+  user?: User;
+  data?: any;
+  id?: string;
+  message?: string;
+  error?: string;
+}
+
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  showToast: (text: string, type?: 'success' | 'info' | 'error') => void;
-  onLoginSuccess: (user: any) => void;
+  showToast: (text: string, type?: ToastType) => void;
+  onLoginSuccess: (user: User) => void;
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({
@@ -16,7 +36,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
   showToast,
   onLoginSuccess
 }) => {
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
+  const [mode, setMode] = useState<AuthMode>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -28,11 +48,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
     confirmNewPassword: ''
   });
 
-  // Add ref for modal content to handle click propagation
+  // Refs
   const modalRef = useRef<HTMLDivElement>(null);
-
-  // Add ref for message handler to use in cleanup
-  const messageHandlerRef = useRef<(event: MessageEvent) => void>();
+  const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
+  const popupRef = useRef<Window | null>(null);
 
   // Cleanup event listener on unmount
   useEffect(() => {
@@ -40,8 +59,28 @@ const AuthModal: React.FC<AuthModalProps> = ({
       if (messageHandlerRef.current) {
         window.removeEventListener('message', messageHandlerRef.current);
       }
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+      }
     };
   }, []);
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setMode('login');
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        otp: '',
+        newPassword: '',
+        confirmNewPassword: ''
+      });
+      setIsLoading(false);
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,13 +92,9 @@ const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Passwords do not match');
         }
 
-        // Log the data being sent
-        console.log('Sending registration data:', {
-          email: formData.email,
-          password: formData.password,
-          username: formData.name,
-          role: 'USER'
-        });
+        if (formData.password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
 
         const userData = {
           email: formData.email,
@@ -68,26 +103,17 @@ const AuthModal: React.FC<AuthModalProps> = ({
           role: 'USER'
         };
 
-        const response = await api.register(userData);
+        const response: AuthResponse = await api.register(userData);
 
-        // Log the response for debugging
-        console.log('Registration response:', response);
-
-        // Check different possible success indicators
         if (response?.success || response?.data || response?.user || response?.id) {
           showToast('Registration successful! You can now sign in.', 'success');
-
-          // Clear sensitive form data
           setFormData(prev => ({
             ...prev,
             password: '',
             confirmPassword: ''
           }));
-
-          // Switch to login mode
           setMode('login');
         } else {
-          // If response has a message, show it
           const errorMessage = response?.message || response?.error || 'Registration failed';
           throw new Error(errorMessage);
         }
@@ -97,25 +123,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Please enter email and password');
         }
 
-        console.log('Sending login data:', {
-          email: formData.email,
-          password: formData.password
-        });
-
         const credentials = {
           email: formData.email,
           password: formData.password
         };
 
-        const response = await api.login(credentials);
-
-        console.log('Login response:', response);
+        const response: AuthResponse = await api.login(credentials);
 
         if (response?.user) {
           showToast('Login successful!', 'success');
           onLoginSuccess(response.user);
-
-          // Clear form and close modal
           setFormData({
             name: '',
             email: '',
@@ -144,6 +161,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
           throw new Error('Passwords do not match');
         }
 
+        if (formData.newPassword.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
+
         if (!formData.otp || formData.otp.length !== 6) {
           throw new Error('Please enter a valid 6-digit OTP');
         }
@@ -168,16 +189,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
       }
     } catch (error) {
       console.error('Auth error:', error);
-      showToast(error instanceof Error ? error.message : 'Authentication failed', 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
   };
 
@@ -190,55 +213,76 @@ const AuthModal: React.FC<AuthModalProps> = ({
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
 
+      const apiUrl = process.env.REACT_APP_API_URL;
+      if (!apiUrl) {
+        throw new Error('API URL not configured');
+      }
+
       const popup = window.open(
-        `${process.env.REACT_APP_API_URL}/auth/${provider}`,
+        `${apiUrl}/auth/${provider}`,
         `${provider} Auth`,
-        `width=${width},height=${height},left=${left},top=${top}`
+        `width=${width},height=${height},left=${left},top=${top},popup=1`
       );
 
-      // Check if popup was blocked
       if (!popup) {
         throw new Error('Popup was blocked. Please allow popups for this site.');
       }
 
+      popupRef.current = popup;
+
       const messageHandler = (event: MessageEvent) => {
-        // Add null check for event.origin
-        if (!event.origin) return;
-        
-        if (event.origin !== process.env.REACT_APP_API_URL) return;
+        // Validate event origin
+        if (!event.origin || event.origin !== apiUrl) return;
+
+        // Validate event data
+        if (!event.data || typeof event.data !== 'object') return;
 
         if (event.data.type === 'AUTH_SUCCESS' && event.data.user) {
-          onLoginSuccess(event.data.user);
-          onClose();
+          onLoginSuccess(event.data.user as User);
           showToast(`Successfully logged in with ${provider}!`, 'success');
+          
+          // Clean up
           window.removeEventListener('message', messageHandler);
-          popup?.close();
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          
+          onClose();
         } else if (event.data.type === 'AUTH_ERROR') {
-          showToast(event.data.message || `${provider} login failed`, 'error');
+          const errorMessage = event.data.message || `${provider} login failed`;
+          showToast(errorMessage, 'error');
+          
+          // Clean up
           window.removeEventListener('message', messageHandler);
-          popup?.close();
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          
+          setIsLoading(false);
         }
       };
 
-      // Store the handler in ref for cleanup
       messageHandlerRef.current = messageHandler;
       window.addEventListener('message', messageHandler);
 
+      // Check if popup was closed by user
       const checkPopupClosed = setInterval(() => {
-        if (popup?.closed) {
+        if (popup.closed) {
           clearInterval(checkPopupClosed);
           window.removeEventListener('message', messageHandler);
           setIsLoading(false);
+          showToast(`${provider} login cancelled`, 'info');
         }
       }, 1000);
 
     } catch (error) {
-      showToast(error instanceof Error ? error.message : `${provider} login failed`, 'error');
+      const errorMessage = error instanceof Error ? error.message : `${provider} login failed`;
+      showToast(errorMessage, 'error');
       setIsLoading(false);
     }
   };
 
-  const getTitle = () => {
+  const getTitle = (): string => {
     switch (mode) {
       case 'login': return 'Welcome Back';
       case 'register': return 'Create Account';
@@ -248,7 +292,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const getSubtitle = () => {
+  const getSubtitle = (): string => {
     switch (mode) {
       case 'login': return 'Enter your details to access your account';
       case 'register': return 'Join cartify for a premium shopping experience';
@@ -258,266 +302,273 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  // Handle click on modal content to prevent closing when clicking inside
+  const handleCloseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClose();
+  };
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Only close if clicking the backdrop itself, not children
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   const handleModalClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
-  // Reset form when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      setMode('login');
-      setFormData({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: '',
-        otp: '',
-        newPassword: '',
-        confirmNewPassword: ''
-      });
-      setIsLoading(false);
-    }
-  }, [isOpen]);
+  const handleModeSwitch = () => {
+    setMode(prev => {
+      if (prev === 'register') return 'login';
+      if (prev === 'login') return 'register';
+      return 'login';
+    });
+    setFormData(prev => ({
+      ...prev,
+      password: '',
+      confirmPassword: '',
+      otp: '',
+      newPassword: '',
+      confirmNewPassword: ''
+    }));
+  };
+
+  if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100000]"
-          />
-          <motion.div
-            ref={modalRef}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            onClick={handleModalClick}
-            className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[100001] rounded-3xl overflow-hidden shadow-2xl p-8"
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-[100002] cursor-pointer"
-              type="button"
-              aria-label="Close"
-            >
-              <X className="w-6 h-6" />
-            </button>
+      <motion.div
+        key="backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={handleBackdropClick}
+        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100000]"
+      />
+      <motion.div
+        key="modal"
+        ref={modalRef}
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ type: 'spring', duration: 0.5 }}
+        onClick={handleModalClick}
+        className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[100001] rounded-3xl overflow-hidden shadow-2xl p-8"
+      >
+        <button
+          onClick={handleCloseClick}
+          className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-[100002] cursor-pointer"
+          type="button"
+          aria-label="Close modal"
+        >
+          <X className="w-6 h-6" />
+        </button>
 
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-serif font-bold mb-2">
-                {getTitle()}
-              </h2>
-              <p className="text-brand-500 text-sm">
-                {getSubtitle()}
-              </p>
-            </div>
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-serif font-bold mb-2">
+            {getTitle()}
+          </h2>
+          <p className="text-brand-500 text-sm">
+            {getSubtitle()}
+          </p>
+        </div>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
-              {mode === 'register' && (
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Full Name"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                  />
-                </div>
-              )}
-
-              {(mode === 'login' || mode === 'register' || mode === 'forgot-password' || mode === 'reset-password') && (
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    readOnly={mode === 'reset-password'}
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Email Address"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
-                  />
-                </div>
-              )}
-
-              {mode === 'reset-password' && (
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                  <input
-                    type="text"
-                    name="otp"
-                    required
-                    maxLength={6}
-                    value={formData.otp}
-                    onChange={handleChange}
-                    placeholder="Enter 6-digit OTP"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                  />
-                </div>
-              )}
-
-              {(mode === 'login' || mode === 'register') && (
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                  <input
-                    type="password"
-                    name="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Password"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                  />
-                </div>
-              )}
-
-              {mode === 'register' && (
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirm Password"
-                    className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                  />
-                </div>
-              )}
-
-              {mode === 'reset-password' && (
-                <>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                    <input
-                      type="password"
-                      name="newPassword"
-                      required
-                      value={formData.newPassword}
-                      onChange={handleChange}
-                      placeholder="New Password"
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                    />
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
-                    <input
-                      type="password"
-                      name="confirmNewPassword"
-                      required
-                      value={formData.confirmNewPassword}
-                      onChange={handleChange}
-                      placeholder="Confirm New Password"
-                      className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
-                    />
-                  </div>
-                </>
-              )}
-
-              {mode === 'login' && (
-                <div className="text-right">
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot-password')}
-                    className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="submit"
+        <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+          {mode === 'register' && (
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <input
+                type="text"
+                name="name"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Full Name"
+                className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
                 disabled={isLoading}
-                className="w-full py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-2 hover:opacity-90 transition-all shadow-lg disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <span>
-                      {mode === 'login' ? 'Sign In' :
-                        mode === 'register' ? 'Create Account' :
-                          mode === 'forgot-password' ? 'Send OTP' : 'Reset Password'}
-                    </span>
-                    <ArrowRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </form>
+              />
+            </div>
+          )}
 
-            {(mode === 'login' || mode === 'register') && (
-              <>
-                <div className="relative my-8">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-brand-100 dark:border-brand-800"></div>
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                    <span className="bg-white dark:bg-brand-900 px-4 text-brand-400">Or continue with</span>
-                  </div>
-                </div>
+          {(mode === 'login' || mode === 'register' || mode === 'forgot-password' || mode === 'reset-password') && (
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <input
+                type="email"
+                name="email"
+                required
+                readOnly={mode === 'reset-password'}
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email Address"
+                className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors disabled:opacity-50"
+                disabled={isLoading || mode === 'reset-password'}
+              />
+            </div>
+          )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleSocialLogin('google')}
-                    disabled={isLoading}
-                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50"
-                  >
-                    <Chrome className="w-5 h-5" />
-                    <span className="text-sm font-medium">Google</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSocialLogin('github')}
-                    disabled={isLoading}
-                    className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50"
-                  >
-                    <Github className="w-5 h-5" />
-                    <span className="text-sm font-medium">GitHub</span>
-                  </button>
-                </div>
-              </>
-            )}
+          {mode === 'reset-password' && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <input
+                type="text"
+                name="otp"
+                required
+                maxLength={6}
+                value={formData.otp}
+                onChange={handleChange}
+                placeholder="Enter 6-digit OTP"
+                className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                disabled={isLoading}
+              />
+            </div>
+          )}
 
-            <p className="mt-8 text-center text-sm text-brand-500">
-              {mode === 'login' ? "Don't have an account?" :
-                mode === 'register' ? "Already have an account?" :
-                  "Remember your password?"}{' '}
+          {(mode === 'login' || mode === 'register') && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <input
+                type="password"
+                name="password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Password"
+                className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                disabled={isLoading}
+              />
+            </div>
+          )}
+
+          {mode === 'register' && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <input
+                type="password"
+                name="confirmPassword"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm Password"
+                className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                disabled={isLoading}
+              />
+            </div>
+          )}
+
+          {mode === 'reset-password' && (
+            <>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+                <input
+                  type="password"
+                  name="newPassword"
+                  required
+                  value={formData.newPassword}
+                  onChange={handleChange}
+                  placeholder="New Password"
+                  className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+                <input
+                  type="password"
+                  name="confirmNewPassword"
+                  required
+                  value={formData.confirmNewPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm New Password"
+                  className="w-full bg-brand-50 dark:bg-brand-800 border border-brand-100 dark:border-brand-700 rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:border-brand-950 dark:focus:border-white transition-colors"
+                  disabled={isLoading}
+                />
+              </div>
+            </>
+          )}
+
+          {mode === 'login' && (
+            <div className="text-right">
               <button
                 type="button"
-                onClick={() => {
-                  setMode(mode === 'register' ? 'login' : mode === 'login' ? 'register' : 'login');
-                  setFormData(prev => ({
-                    ...prev,
-                    password: '',
-                    confirmPassword: '',
-                    otp: '',
-                    newPassword: '',
-                    confirmNewPassword: ''
-                  }));
-                }}
-                className="font-bold text-brand-950 dark:text-white hover:underline"
+                onClick={() => setMode('forgot-password')}
+                className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest"
+                disabled={isLoading}
               >
-                {mode === 'login' ? 'Sign Up' : 'Sign In'}
+                Forgot Password?
               </button>
-            </p>
-          </motion.div>
-        </>
-      )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-2 hover:opacity-90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <span>
+                  {mode === 'login' ? 'Sign In' :
+                    mode === 'register' ? 'Create Account' :
+                      mode === 'forgot-password' ? 'Send OTP' : 'Reset Password'}
+                </span>
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {(mode === 'login' || mode === 'register') && (
+          <>
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-brand-100 dark:border-brand-800"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                <span className="bg-white dark:bg-brand-900 px-4 text-brand-400">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => handleSocialLogin('google')}
+                disabled={isLoading}
+                className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Chrome className="w-5 h-5" />
+                <span className="text-sm font-medium">Google</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin('github')}
+                disabled={isLoading}
+                className="flex items-center justify-center space-x-2 py-3 border border-brand-100 dark:border-brand-800 rounded-xl hover:bg-brand-50 dark:hover:bg-brand-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Github className="w-5 h-5" />
+                <span className="text-sm font-medium">GitHub</span>
+              </button>
+            </div>
+          </>
+        )}
+
+        <p className="mt-8 text-center text-sm text-brand-500">
+          {mode === 'login' ? "Don't have an account?" :
+            mode === 'register' ? "Already have an account?" :
+              "Remember your password?"}{' '}
+          <button
+            type="button"
+            onClick={handleModeSwitch}
+            className="font-bold text-brand-950 dark:text-white hover:underline disabled:opacity-50"
+            disabled={isLoading}
+          >
+            {mode === 'login' ? 'Sign Up' : 'Sign In'}
+          </button>
+        </p>
+      </motion.div>
     </AnimatePresence>
   );
 };
