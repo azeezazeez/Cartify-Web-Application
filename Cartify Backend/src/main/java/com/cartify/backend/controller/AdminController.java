@@ -162,7 +162,7 @@ public class AdminController {
         }
     }
 
-    // 6️⃣ Get all customers with calculated total orders and total spent
+    // 6️⃣ Get all customers with calculated total spent
     @GetMapping("/customers")
     public ResponseEntity<ApiResponse<List<AdminCustomerDTO>>> getAllCustomers() {
         try {
@@ -171,23 +171,23 @@ public class AdminController {
             // Get all orders to calculate customer stats
             List<Order> allOrders = orderRepository.findAll();
             
-            // Create a map to store customer stats
-            Map<Long, CustomerStats> customerStatsMap = new HashMap<>();
+            // Create maps to store customer stats
+            Map<Long, Integer> customerOrderCount = new HashMap<>();
+            Map<Long, Double> customerTotalSpent = new HashMap<>();
             
             // Calculate stats for each customer
             for (Order order : allOrders) {
-                Long userId = order.getUserId(); // Fixed: Changed from getUser().getId() to getUserId()
-                CustomerStats stats = customerStatsMap.getOrDefault(userId, new CustomerStats(0, 0.0));
-                stats.setTotalOrders(stats.getTotalOrders() + 1);
-                stats.setTotalSpent(stats.getTotalSpent() + order.getTotalAmount());
-                customerStatsMap.put(userId, stats);
+                Long userId = order.getUserId();
+                customerOrderCount.put(userId, customerOrderCount.getOrDefault(userId, 0) + 1);
+                customerTotalSpent.put(userId, customerTotalSpent.getOrDefault(userId, 0.0) + order.getTotalAmount());
             }
 
             List<AdminCustomerDTO> customerDTOs = users.stream()
-                    .map(user -> {
-                        CustomerStats stats = customerStatsMap.getOrDefault(user.getId(), new CustomerStats(0, 0.0));
-                        return AdminCustomerDTO.fromUser(user, stats.getTotalOrders(), stats.getTotalSpent());
-                    })
+                    .map(user -> AdminCustomerDTO.fromUser(
+                        user, 
+                        customerOrderCount.getOrDefault(user.getId(), 0),
+                        customerTotalSpent.getOrDefault(user.getId(), 0.0)
+                    ))
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(
@@ -200,7 +200,7 @@ public class AdminController {
         }
     }
 
-    // 7️⃣ Get customer by ID with calculated stats
+    // 7️⃣ Get customer by ID with calculated total spent
     @GetMapping("/customers/{customerId}")
     public ResponseEntity<ApiResponse<AdminCustomerDTO>> getCustomerById(@PathVariable Long customerId) {
         try {
@@ -244,23 +244,6 @@ public class AdminController {
                     .body(ApiResponse.error("Failed to fetch customer orders: " + e.getMessage()));
         }
     }
-}
-
-// Helper class for customer stats
-class CustomerStats {
-    private int totalOrders;
-    private double totalSpent;
-    
-    public CustomerStats(int totalOrders, double totalSpent) {
-        this.totalOrders = totalOrders;
-        this.totalSpent = totalSpent;
-    }
-    
-    public int getTotalOrders() { return totalOrders; }
-    public void setTotalOrders(int totalOrders) { this.totalOrders = totalOrders; }
-    
-    public double getTotalSpent() { return totalSpent; }
-    public void setTotalSpent(double totalSpent) { this.totalSpent = totalSpent; }
 }
 
 // DTOs
