@@ -1,48 +1,52 @@
-// Even more aggressive z-index version
-export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onRemove }) => {
-  // ... rest of the code remains the same ...
+// App.tsx or wherever you want to use it
+import React, { useState, useCallback } from 'react';
+import { ToastContainer, ToastMessage } from './ToastContainer';
+
+function App() {
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = useCallback((text: string, type: 'success' | 'info') => {
+    const newToast: ToastMessage = {
+      id: Date.now().toString(),
+      text,
+      type,
+    };
+    setToasts(prev => [...prev, newToast]);
+
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== newToast.id));
+    }, 3000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
   return (
-    // Create a new stacking context with maximum z-index
-    <div 
-      className={styles.wrapper} 
-      style={{ 
-        zIndex: 2147483647, // Maximum 32-bit integer value
-        isolation: 'isolate' // Creates a new stacking context
-      }}
-    >
-      <div className={styles.inner}>
-        <AnimatePresence>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              layout
-              {...animationProps}
-              className={`
-                ${styles.message}
-                ${styles.spacing}
-                flex items-center
-                ${msg.type === 'success' 
-                  ? 'bg-green-600 dark:bg-green-700' 
-                  : 'bg-blue-600 dark:bg-blue-700'
-                }
-                text-white
-                shadow-2xl
-                mb-2
-                cursor-pointer
-                active:scale-95 transition-transform
-              `}
-              onClick={() => onRemove(msg.id)}
-              style={{ 
-                position: 'relative', 
-                zIndex: 2147483647
-              }}
-            >
-              {/* ... rest of the toast content ... */}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="space-x-2">
+        <button
+          onClick={() => addToast('Operation completed successfully!', 'success')}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg"
+        >
+          Show Success Toast
+        </button>
+        
+        <button
+          onClick={() => addToast('New information available', 'info')}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+        >
+          Show Info Toast
+        </button>
       </div>
+
+      <ToastContainer 
+        messages={toasts} 
+        onRemove={removeToast}
+      />
     </div>
   );
-};
+}
+
+export default App;
