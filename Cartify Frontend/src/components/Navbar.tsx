@@ -38,6 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -135,61 +136,144 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // Handle search submission
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  // Handle search submission with scroll to products
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchValue.trim()) {
-      onSearch(searchValue.trim());
+    
+    if (!searchValue.trim()) {
+      return;
     }
+
+    setIsSearching(true);
+    
+    // Call the onSearch prop to filter products
+    onSearch(searchValue.trim());
+
+    // First, navigate to home page if not already there
+    if (window.location.pathname !== '/') {
+      navigate('/');
+      // Wait for navigation to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    // Find and scroll to products section
+    const findAndScrollToProducts = () => {
+      // Look for common product section selectors
+      const possibleSelectors = [
+        'section.grid',
+        '.products-grid',
+        '#products-section',
+        '[data-testid="products-grid"]',
+        '.product-list',
+        'main section:has(.product-card)',
+        'section:has(> div > .product-card)'
+      ];
+
+      let productsSection = null;
+      
+      // Try each selector
+      for (const selector of possibleSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          productsSection = element;
+          break;
+        }
+      }
+
+      // If still not found, look for any section containing product cards
+      if (!productsSection) {
+        const allSections = document.querySelectorAll('section');
+        for (const section of allSections) {
+          if (section.querySelector('.product-card') || 
+              section.innerHTML.includes('product') || 
+              section.classList.toString().includes('product')) {
+            productsSection = section;
+            break;
+          }
+        }
+      }
+
+      if (productsSection) {
+        // Scroll to the products section
+        productsSection.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+        
+        // Highlight the search input or show a success message
+        showToast(`Showing results for "${searchValue}"`, 'success');
+      } else {
+        // If no products section found, show a message
+        showToast(`No products found for "${searchValue}"`, 'info');
+      }
+    };
+
+    // Small delay to ensure products are rendered
+    setTimeout(findAndScrollToProducts, 500);
+    
+    setIsSearching(false);
   };
 
-  // Dynamic text color based on scroll state
+  // Handle search result click from external source (like search results page)
+  const handleSearchResultClick = (productId: string) => {
+    // Navigate to product detail or scroll to product
+    navigate(`/product/${productId}`);
+  };
+
+  // FIX 1: Always keep text white regardless of scroll state
   const getTextColor = () => {
-    if (isScrolled) return 'text-gray-900';
-    return 'text-white';
+    return 'text-white'; // Always white
   };
 
+  // FIX 1: Logo always white
   const getLogoColor = () => {
-    if (isScrolled) return 'text-brand-950';
-    return 'text-white';
+    return 'text-white'; // Always white
   };
 
+  // Button hover effects - keep them subtle
   const getButtonHoverColor = () => {
-    if (isScrolled) return 'hover:bg-brand-100';
-    return 'hover:bg-white/20';
+    if (isScrolled) return 'hover:bg-white/20'; // Light hover on scrolled background
+    return 'hover:bg-white/20'; // Consistent hover
   };
 
   const getIconColor = () => {
-    if (isScrolled) return 'text-brand-400';
-    return 'text-white';
+    return 'text-white'; // Always white icons
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = isScrolled ? 'hover:text-brand-600' : 'hover:text-white/80';
+  const hoverColor = 'hover:text-white/80'; // Always fade to white on hover
   const buttonBgHover = getButtonHoverColor();
-  const searchBgColor = isScrolled ? 'bg-brand-50' : 'bg-white/20';
-  const searchTextColor = isScrolled ? 'text-gray-900' : 'text-white';
-  const searchPlaceholderColor = isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
+  
+  // FIX 1: Search background adapts but text stays white
+  const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20'; // Consistent semi-transparent background
+  const searchTextColor = 'text-white'; // Always white text
+  const searchPlaceholderColor = 'placeholder-white/70'; // Always white placeholder
   const iconColor = getIconColor();
 
+  // FIX 2: Prevent navbar compression when mobile menu is open
   const getToggleButtonColor = () => {
-    if (isMobileMenuOpen) return 'text-gray-900';
-    if (isScrolled) return 'text-gray-900';
-    return 'text-white';
+    return 'text-white'; // Always white
+  };
+
+  // FIX 2: Ensure navbar doesn't change when mobile menu opens
+  const getNavbarClasses = () => {
+    return cn(
+      'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
+      isScrolled 
+        ? 'py-2 sm:py-3 bg-black/80 backdrop-blur-md shadow-md' // Dark background when scrolled
+        : 'py-3 sm:py-4 bg-transparent', // Transparent background at top
+      // Ensure consistent height regardless of menu state
+      'h-[60px] sm:h-[70px] flex items-center'
+    );
   };
 
   return (
     <nav
       ref={navbarRef}
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6 py-3 sm:py-4',
-        isScrolled 
-          ? 'glass py-2 sm:py-3 bg-white/80 backdrop-blur-md shadow-md' 
-          : 'bg-transparent'
-      )}
+      className={getNavbarClasses()}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
@@ -216,7 +300,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </Link>
         </div>
 
-        {/* Desktop Navigation */}
+        {/* Desktop Navigation - Always white text */}
         <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 text-xs xl:text-sm font-medium uppercase tracking-widest">
           <a
             href="#"
@@ -263,24 +347,29 @@ export const Navbar: React.FC<NavbarProps> = ({
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search..."
+              placeholder="Search products..."
               value={searchValue}
               onChange={handleSearchChange}
+              disabled={isSearching}
               className={cn(
                 "bg-transparent border-none outline-none text-xs w-full cursor-text",
                 searchTextColor,
-                searchPlaceholderColor
+                searchPlaceholderColor,
+                isSearching && "opacity-50 cursor-wait"
               )}
             />
-            {searchValue && (
+            {searchValue && !isSearching && (
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-brand-100 hover:bg-brand-200 transition-colors flex-shrink-0"
+                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
                 aria-label="Clear search"
               >
-                <X className="w-2 h-2 sm:w-3 sm:h-3 text-brand-600" />
+                <X className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
               </button>
+            )}
+            {isSearching && (
+              <div className="ml-1 sm:ml-2 w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
           </form>
 
@@ -289,6 +378,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={handleSearchToggle}
             className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
             aria-label="Toggle search"
+            disabled={isSearching}
           >
             <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
@@ -302,7 +392,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
             {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-600 text-white">
                 {wishlistCount}
               </span>
             )}
@@ -369,7 +459,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-600 text-white">
                 {cartCount}
               </span>
             )}
