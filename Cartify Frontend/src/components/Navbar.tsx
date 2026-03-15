@@ -135,64 +135,85 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // Handle search submission
+  // CHANGED: Handle search submission with scroll to products section
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
       onSearch(searchValue.trim());
+      
+      // Find and scroll to products section
+      setTimeout(() => {
+        // Try to find products section with common selectors
+        const productsSection = 
+          document.querySelector('.products-grid') ||
+          document.querySelector('.product-grid') ||
+          document.querySelector('[data-testid="products-grid"]') ||
+          document.querySelector('section.grid') ||
+          document.querySelector('.grid-cols-1') ||
+          document.querySelector('.grid-cols-2') ||
+          document.querySelector('.grid-cols-3') ||
+          document.querySelector('.grid-cols-4') ||
+          document.querySelector('main section:first-child') ||
+          document.querySelector('section');
+        
+        if (productsSection) {
+          productsSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
     }
   };
 
   // Dynamic text color based on scroll state
   const getTextColor = () => {
-    if (isScrolled) return 'text-gray-900';
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getLogoColor = () => {
-    if (isScrolled) return 'text-brand-950';
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getButtonHoverColor = () => {
-    if (isScrolled) return 'hover:bg-brand-100';
+    if (isScrolled) return 'hover:bg-white/20';
     return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
-    if (isScrolled) return 'text-brand-400';
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = isScrolled ? 'hover:text-brand-600' : 'hover:text-white/80';
+  const hoverColor = 'hover:text-white/80';
   const buttonBgHover = getButtonHoverColor();
-  const searchBgColor = isScrolled ? 'bg-brand-50' : 'bg-white/20';
-  const searchTextColor = isScrolled ? 'text-gray-900' : 'text-white';
-  const searchPlaceholderColor = isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
+  const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20';
+  const searchTextColor = 'text-white';
+  const searchPlaceholderColor = 'placeholder-white/70';
   const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
-    if (isScrolled) return 'text-gray-900';
     return 'text-white';
   };
 
   return (
-        <nav
-  ref={navbarRef}
-         className={cn(
-         className={cn(
-         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
-           'h-16 sm:h-20 flex items-center',
-             isScrolled 
-           ? 'glass bg-black/80 backdrop-blur-md shadow-md'
-             : 'bg-transparent',
-           'overflow-visible shrink-0'
-        )}
-            >
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
+    <nav
+      ref={navbarRef}
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
+        'h-16 sm:h-20 flex items-center',
+        isScrolled 
+          ? 'glass bg-black/80 backdrop-blur-md shadow-md'
+          : 'bg-transparent',
+        'overflow-visible shrink-0'
+      )}
+    >
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
@@ -380,28 +401,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu - FIXED: Maximum z-index values to ensure full expansion */}
+      {/* CHANGED: Mobile Menu - Added higher z-index to ensure it expands properly */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop - Maximum z-index */}
+            {/* Backdrop - semi-transparent black */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
               style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              className="fixed inset-0 backdrop-blur-sm z-[2147483647]"
+              className="fixed inset-0 backdrop-blur-sm z-[99998]"
             />
             
-            {/* Menu Panel - Even higher z-index */}
+            {/* Menu Panel - FORCED white background with higher z-index */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               style={{ backgroundColor: '#ffffff' }}
-             className="fixed top-0 left-0 h-screen w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
+              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col"
             >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
