@@ -121,20 +121,42 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Consistent colors for all devices
-  const textColor = 'text-gray-900';
-  const logoColor = 'text-brand-950';
-  const hoverColor = 'hover:text-brand-600';
-  const buttonBgHover = 'hover:bg-brand-100';
-  const searchBgColor = 'bg-brand-50';
-  const searchTextColor = 'text-gray-900';
-  const searchPlaceholderColor = 'placeholder-gray-500';
-  const iconColor = 'text-brand-400';
+  // Dynamic text color based on scroll state
+  const getTextColor = () => {
+    if (isScrolled) return 'text-gray-900'; // Dark text when scrolled (on light background)
+    return 'text-white'; // Light text when at top (on dark background)
+  };
+
+  // Dynamic logo color based on scroll state
+  const getLogoColor = () => {
+    if (isScrolled) return 'text-brand-950';
+    return 'text-white';
+  };
+
+  // Dynamic button background hover based on scroll state
+  const getButtonHoverColor = () => {
+    if (isScrolled) return 'hover:bg-brand-100';
+    return 'hover:bg-white/20';
+  };
+
+  const getIconColor = () => {
+    if (isScrolled) return 'text-brand-400';
+    return 'text-white';
+  };
+
+  const textColor = getTextColor();
+  const logoColor = getLogoColor();
+  const hoverColor = isScrolled ? 'hover:text-brand-600' : 'hover:text-white/80';
+  const buttonBgHover = getButtonHoverColor();
+  const searchBgColor = isScrolled ? 'bg-brand-50' : 'bg-white/20';
+  const searchTextColor = isScrolled ? 'text-gray-900' : 'text-white';
+  const searchPlaceholderColor = isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
+  const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
     if (isScrolled) return 'text-gray-900';
-    return 'text-gray-900';
+    return 'text-white';
   };
 
   return (
@@ -142,7 +164,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       ref={navbarRef}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 py-4',
-        isScrolled ? 'glass py-3 bg-white/80 backdrop-blur-md' : 'bg-white'
+        isScrolled 
+          ? 'glass py-3 bg-white/80 backdrop-blur-md shadow-md' 
+          : 'bg-transparent'
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
