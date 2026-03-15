@@ -416,13 +416,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {/* Menu Panel - FORCED white background with higher z-index */}
             <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              style={{ backgroundColor: '#ffffff' }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col"
-            >
+                initial={{ x: '-100%' }}
+                 animate={{ x: 0 }}
+                 exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                style={{ backgroundColor: '#ffffff' }}
+             className="fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col min-h-screen"
+             >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
                 <span style={{ color: '#111827' }} className="text-xl font-serif font-bold tracking-tighter">
