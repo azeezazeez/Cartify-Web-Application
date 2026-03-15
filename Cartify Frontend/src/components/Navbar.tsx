@@ -135,32 +135,55 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // Handle search submission
+  // CHANGED: Handle search submission with scroll to products section
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
       onSearch(searchValue.trim());
+      
+      // Find and scroll to products section
+      setTimeout(() => {
+        // Try to find products section with common selectors
+        const productsSection = 
+          document.querySelector('.products-grid') ||
+          document.querySelector('.product-grid') ||
+          document.querySelector('[data-testid="products-grid"]') ||
+          document.querySelector('section.grid') ||
+          document.querySelector('.grid-cols-1') ||
+          document.querySelector('.grid-cols-2') ||
+          document.querySelector('.grid-cols-3') ||
+          document.querySelector('.grid-cols-4') ||
+          document.querySelector('main section:first-child') ||
+          document.querySelector('section');
+        
+        if (productsSection) {
+          productsSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }
+      }, 100);
     }
   };
 
   // Dynamic text color based on scroll state
   const getTextColor = () => {
-    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getLogoColor = () => {
-    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getButtonHoverColor = () => {
-    if (isScrolled) return 'hover:bg-white/20'; // CHANGED: Keep white hover
+    if (isScrolled) return 'hover:bg-white/20';
     return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
-    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
@@ -175,7 +198,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
-    return 'text-white'; // CHANGED: Always white when not in mobile menu
+    return 'text-white';
   };
 
   return (
@@ -183,14 +206,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       ref={navbarRef}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
-        'h-16 sm:h-20 flex items-center', // ADDED: Fixed height to prevent compression
+        'h-16 sm:h-20 flex items-center',
         isScrolled 
-          ? 'glass bg-black/80 backdrop-blur-md shadow-md' // CHANGED: Darker background for white icons
+          ? 'glass bg-black/80 backdrop-blur-md shadow-md'
           : 'bg-transparent',
-        'overflow-visible shrink-0' // ADDED: Prevent shrinking
+        'overflow-visible shrink-0'
       )}
     >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full"> {/* ADDED: w-full and h-full */}
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
@@ -378,7 +401,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu - FORCED white background with black text */}
+      {/* CHANGED: Mobile Menu - Added higher z-index to ensure it expands properly */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -389,17 +412,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
               style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              className="fixed inset-0 backdrop-blur-sm z-[60]"
+              className="fixed inset-0 backdrop-blur-sm z-[9999]"
             />
             
-            {/* Menu Panel - FORCED white background with inline style to override any theme */}
+            {/* Menu Panel - FORCED white background with higher z-index */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               style={{ backgroundColor: '#ffffff' }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[70] shadow-2xl flex flex-col"
+              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
             >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
