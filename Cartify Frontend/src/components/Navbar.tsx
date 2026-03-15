@@ -4,6 +4,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
+interface UserType {
+  email: string;
+  name?: string;
+  id?: string;
+}
+
 interface NavbarProps {
   cartCount: number;
   wishlistCount: number;
@@ -11,7 +17,7 @@ interface NavbarProps {
   onWishlistClick: () => void;
   onAuthClick: () => void;
   onLogout: () => void;
-  user: any;
+  user: UserType | null;
   isDark: boolean;
   toggleTheme: () => void;
   showToast: (text: string, type?: 'success' | 'info') => void;
@@ -135,16 +141,16 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // CHANGED: Handle search submission with scroll to products section
+  // Handle search submission with scroll to products section
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchValue.trim()) {
       onSearch(searchValue.trim());
-      
+
       // Find and scroll to products section
       setTimeout(() => {
         // Try to find products section with common selectors
-        const productsSection = 
+        const productsSection =
           document.querySelector('.products-grid') ||
           document.querySelector('.product-grid') ||
           document.querySelector('[data-testid="products-grid"]') ||
@@ -155,11 +161,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           document.querySelector('.grid-cols-4') ||
           document.querySelector('main section:first-child') ||
           document.querySelector('section');
-        
+
         if (productsSection) {
-          productsSection.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start' 
+          productsSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
           });
         }
       }, 100);
@@ -205,9 +211,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     <nav
       ref={navbarRef}
       className={cn(
-        'fixed top-0 left-0 right-0 z-[20000] transition-all duration-300 px-4 sm:px-6',
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
         'h-16 sm:h-20 flex items-center',
-        isScrolled 
+        isScrolled
           ? 'glass bg-black/80 backdrop-blur-md shadow-md'
           : 'bg-transparent',
         'overflow-visible shrink-0'
@@ -275,7 +281,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Actions */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
           {/* Search input */}
-          <form 
+          <form
             onSubmit={handleSearchSubmit}
             className={cn(
               "flex items-center rounded-full px-3 sm:px-4 py-1 transition-all duration-300",
@@ -334,22 +340,22 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* User menu - Desktop only */}
           <div className="relative">
-  <button
-    onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
-    className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
-    aria-label="User menu"
-  >
-    <User className="w-4 h-4 sm:w-5 sm:h-5" />
-  </button>
+            <button
+              onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
+              className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+              aria-label="User menu"
+            >
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
 
-  <AnimatePresence>
-    {isUserMenuOpen && user && (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 10 }}
-        className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
-      >
+            <AnimatePresence>
+              {isUserMenuOpen && user && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-brand-100 py-2 z-[60]"
+                >
                   <div className="px-4 py-2 border-b border-brand-100">
                     <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest">Signed in as</p>
                     <p className="text-xs sm:text-sm font-medium truncate text-gray-900">{user.email}</p>
@@ -405,32 +411,32 @@ export const Navbar: React.FC<NavbarProps> = ({
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop - semi-transparent black */}
+            {/* Backdrop - lower z-index to not block modals */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
               style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              className="fixed inset-0 backdrop-blur-sm z-[99999]"
+              className="fixed inset-0 backdrop-blur-sm z-[100]"
             />
-            
-            {/* Menu Panel - FORCED white background with higher z-index */}
+
+            {/* Menu Panel - adjusted z-index */}
             <motion.div
-                initial={{ x: '-100%' }}
-                 animate={{ x: 0 }}
-                 exit={{ x: '-100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                style={{ backgroundColor: '#ffffff' }}
-             className="fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[99999] shadow-2xl flex flex-col min-h-screen"
-             >
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              style={{ backgroundColor: '#ffffff' }}
+              className="fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[101] shadow-2xl flex flex-col min-h-screen"
+            >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
                 <span style={{ color: '#111827' }} className="text-xl font-serif font-bold tracking-tighter">
                   CARTIFY
                 </span>
-                <button 
-                  onClick={() => setIsMobileMenuOpen(false)} 
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
                   style={{ color: '#374151' }}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                   aria-label="Close menu"
@@ -438,7 +444,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               {/* Menu Items - Black text on white background */}
               <div style={{ backgroundColor: '#ffffff' }} className="flex-1 overflow-y-auto py-6 px-6">
                 <div className="flex flex-col space-y-1">
@@ -539,7 +545,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       </button>
                     </>
                   )}
-                  
+
                   <div
                     onClick={handleMobileSearchClick}
                     style={{ color: '#111827' }}
