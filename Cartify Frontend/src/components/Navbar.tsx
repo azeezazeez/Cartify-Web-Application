@@ -136,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsSearchOpen(true);
   };
 
-  // Handle search submission with scroll to products
+  // FIX 1: Proper search submission with scrolling
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -149,30 +149,41 @@ export const Navbar: React.FC<NavbarProps> = ({
     // Call the onSearch prop to filter products
     onSearch(searchValue.trim());
 
-    // First, navigate to home page if not already there
+    // Close mobile menu if open
+    setIsMobileMenuOpen(false);
+    
+    // Close search input
+    setIsSearchOpen(false);
+
+    // Navigate to home page if not already there
     if (window.location.pathname !== '/') {
       navigate('/');
       // Wait for navigation to complete
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Find and scroll to products section
-    const findAndScrollToProducts = () => {
-      // Look for common product section selectors
-      const possibleSelectors = [
-        'section.grid',
-        '.products-grid',
-        '#products-section',
+    // Function to find and scroll to products
+    const scrollToProducts = () => {
+      // Try multiple selectors to find products section
+      const selectors = [
         '[data-testid="products-grid"]',
+        '.products-grid',
+        '.product-grid',
         '.product-list',
-        'main section:has(.product-card)',
-        'section:has(> div > .product-card)'
+        'section:has(.product-card)',
+        '.grid:has(.product-card)',
+        '#products-section',
+        '.featured-products',
+        '.product-section',
+        'main section:nth-child(2)', // Common pattern where products are the second section
+        'section.products',
+        'div.products'
       ];
 
       let productsSection = null;
       
       // Try each selector
-      for (const selector of possibleSelectors) {
+      for (const selector of selectors) {
         const element = document.querySelector(selector);
         if (element) {
           productsSection = element;
@@ -180,106 +191,87 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
       }
 
-      // If still not found, look for any section containing product cards
+      // If still not found, look for any element containing product cards
       if (!productsSection) {
-        const allSections = document.querySelectorAll('section');
-        for (const section of allSections) {
-          if (section.querySelector('.product-card') || 
-              section.innerHTML.includes('product') || 
-              section.classList.toString().includes('product')) {
-            productsSection = section;
+        // Look for common product card patterns
+        const possibleElements = document.querySelectorAll('section, div, main');
+        for (const element of possibleElements) {
+          if (
+            element.querySelector('.product-card') ||
+            element.querySelector('[class*="product"]') ||
+            element.querySelector('img[alt*="product"]') ||
+            element.innerHTML.includes('product-card') ||
+            element.classList.toString().includes('product')
+          ) {
+            productsSection = element;
             break;
           }
         }
       }
 
       if (productsSection) {
-        // Scroll to the products section
+        // Smooth scroll to products section
         productsSection.scrollIntoView({ 
           behavior: 'smooth', 
-          block: 'start' 
+          block: 'start',
+          inline: 'nearest'
         });
         
-        // Highlight the search input or show a success message
+        // Highlight the search query
         showToast(`Showing results for "${searchValue}"`, 'success');
       } else {
-        // If no products section found, show a message
         showToast(`No products found for "${searchValue}"`, 'info');
       }
     };
 
-    // Small delay to ensure products are rendered
-    setTimeout(findAndScrollToProducts, 500);
+    // Wait a bit for products to render
+    setTimeout(scrollToProducts, 800);
     
     setIsSearching(false);
   };
 
-  // Handle search result click from external source (like search results page)
-  const handleSearchResultClick = (productId: string) => {
-    // Navigate to product detail or scroll to product
-    navigate(`/product/${productId}`);
-  };
-
-  // FIX 1: Always keep text white regardless of scroll state
-  const getTextColor = () => {
-    return 'text-white'; // Always white
-  };
-
-  // FIX 1: Logo always white
-  const getLogoColor = () => {
-    return 'text-white'; // Always white
-  };
-
-  // Button hover effects - keep them subtle
-  const getButtonHoverColor = () => {
-    if (isScrolled) return 'hover:bg-white/20'; // Light hover on scrolled background
-    return 'hover:bg-white/20'; // Consistent hover
-  };
-
-  const getIconColor = () => {
-    return 'text-white'; // Always white icons
-  };
-
-  const textColor = getTextColor();
-  const logoColor = getLogoColor();
-  const hoverColor = 'hover:text-white/80'; // Always fade to white on hover
-  const buttonBgHover = getButtonHoverColor();
-  
-  // FIX 1: Search background adapts but text stays white
-  const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20'; // Consistent semi-transparent background
-  const searchTextColor = 'text-white'; // Always white text
-  const searchPlaceholderColor = 'placeholder-white/70'; // Always white placeholder
-  const iconColor = getIconColor();
-
-  // FIX 2: Prevent navbar compression when mobile menu is open
-  const getToggleButtonColor = () => {
-    return 'text-white'; // Always white
-  };
-
-  // FIX 2: Ensure navbar doesn't change when mobile menu opens
+  // FIX 2: Ensure navbar doesn't compress
   const getNavbarClasses = () => {
     return cn(
-      'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
+      // Base classes
+      'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
+      // Height - fixed to prevent compression
+      'h-[64px] sm:h-[72px]',
+      // Flexbox for centering
+      'flex items-center',
+      // Padding
+      'px-4 sm:px-6',
+      // Background based on scroll
       isScrolled 
-        ? 'py-2 sm:py-3 bg-black/80 backdrop-blur-md shadow-md' // Dark background when scrolled
-        : 'py-3 sm:py-4 bg-transparent', // Transparent background at top
-      // Ensure consistent height regardless of menu state
-      'h-[60px] sm:h-[70px] flex items-center'
+        ? 'bg-black/80 backdrop-blur-md shadow-md' 
+        : 'bg-transparent',
+      // Ensure content stays within
+      'overflow-visible'
     );
   };
+
+  // Always white text
+  const textColor = 'text-white';
+  const logoColor = 'text-white';
+  const hoverColor = 'hover:text-white/80';
+  const buttonBgHover = 'hover:bg-white/20';
+  const searchBgColor = 'bg-white/20';
+  const searchTextColor = 'text-white';
+  const searchPlaceholderColor = 'placeholder-white/70';
+  const iconColor = 'text-white';
 
   return (
     <nav
       ref={navbarRef}
       className={getNavbarClasses()}
     >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
-            "lg:hidden p-2 rounded-full transition-colors",
+            "lg:hidden p-2 rounded-full transition-colors flex-shrink-0",
             buttonBgHover,
-            getToggleButtonColor()
+            textColor
           )}
           onClick={() => setIsMobileMenuOpen(true)}
           aria-label="Open menu"
@@ -301,7 +293,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Desktop Navigation - Always white text */}
-        <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 text-xs xl:text-sm font-medium uppercase tracking-widest">
+        <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 text-xs xl:text-sm font-medium uppercase tracking-widest flex-shrink-0">
           <a
             href="#"
             onClick={(e) => handleLinkClick(e, 'Shop')}
@@ -332,15 +324,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           </a>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+        {/* Actions - Prevent shrinking */}
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4 flex-shrink-0">
           {/* Search input */}
           <form 
             onSubmit={handleSearchSubmit}
             className={cn(
               "flex items-center rounded-full px-3 sm:px-4 py-1 transition-all duration-300",
               searchBgColor,
-              isSearchOpen ? "w-28 sm:w-48 md:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
+              isSearchOpen ? "w-28 sm:w-48 md:w-64 opacity-100" : "w-0 opacity-0 overflow-hidden px-0"
             )}
           >
             <Search className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0", iconColor)} />
@@ -369,14 +361,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
             {isSearching && (
-              <div className="ml-1 sm:ml-2 w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="ml-1 sm:ml-2 w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0" />
             )}
           </form>
 
           {/* Search toggle button */}
           <button
             onClick={handleSearchToggle}
-            className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors flex-shrink-0", buttonBgHover, textColor)}
             aria-label="Toggle search"
             disabled={isSearching}
           >
@@ -387,7 +379,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Link
             to="/wishlist"
             onClick={() => setIsMobileMenuOpen(false)}
-            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative hidden sm:block", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative hidden sm:block flex-shrink-0", buttonBgHover, textColor)}
             aria-label="Wishlist"
           >
             <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -399,7 +391,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </Link>
 
           {/* User menu - Desktop only */}
-          <div className="relative hidden sm:block">
+          <div className="relative hidden sm:block flex-shrink-0">
             <button
               onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
               className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
@@ -454,7 +446,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Cart button */}
           <button
             onClick={onCartClick}
-            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative", buttonBgHover, textColor)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative flex-shrink-0", buttonBgHover, textColor)}
             aria-label="Shopping cart"
           >
             <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -481,7 +473,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed inset-0 backdrop-blur-sm z-[60]"
             />
             
-            {/* Menu Panel - FORCED white background with inline style to override any theme */}
+            {/* Menu Panel - FORCED white background */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -490,7 +482,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               style={{ backgroundColor: '#ffffff' }}
               className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[70] shadow-2xl flex flex-col"
             >
-              {/* Header - White background, dark text */}
+              {/* Header */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
                 <span style={{ color: '#111827' }} className="text-xl font-serif font-bold tracking-tighter">
                   CARTIFY
@@ -505,7 +497,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               </div>
               
-              {/* Menu Items - Black text on white background */}
+              {/* Menu Items */}
               <div style={{ backgroundColor: '#ffffff' }} className="flex-1 overflow-y-auto py-6 px-6">
                 <div className="flex flex-col space-y-1">
                   <a
@@ -572,7 +564,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               </div>
 
-              {/* Footer Actions - White background, black text */}
+              {/* Footer Actions */}
               <div style={{ backgroundColor: '#ffffff', borderTopColor: '#e5e7eb' }} className="border-t p-6">
                 <div className="flex flex-col space-y-3">
                   {!user ? (
