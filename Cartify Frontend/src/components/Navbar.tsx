@@ -377,28 +377,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu - FIXED: Increased z-index to ensure full expansion */}
+      {/* Mobile Menu - FIXED: Maximum z-index values to ensure full expansion */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop - Increased z-index */}
-           <motion.div
-  initial={{ x: '-100%' }}
-  animate={{ x: 0 }}
-  exit={{ x: '-100%' }}
-  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-  style={{ backgroundColor: '#ffffff' }}
-  className="fixed top-0 left-0 h-screen w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
->
+            {/* Backdrop - Maximum z-index */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+              className="fixed inset-0 backdrop-blur-sm z-[2147483647]"
+            />
             
-            {/* Menu Panel - Increased z-index */}
+            {/* Menu Panel - Even higher z-index */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               style={{ backgroundColor: '#ffffff' }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
+              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[2147483647] shadow-2xl flex flex-col"
             >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
