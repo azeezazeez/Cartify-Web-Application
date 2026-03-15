@@ -183,7 +183,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         <nav
   ref={navbarRef}
          className={cn(
-         'fixed top-0 left-0 right-0 z-[20000] transition-all duration-300 px-4 sm:px-6',
+         className={cn(
+         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
            'h-16 sm:h-20 flex items-center',
              isScrolled 
            ? 'glass bg-black/80 backdrop-blur-md shadow-md'
