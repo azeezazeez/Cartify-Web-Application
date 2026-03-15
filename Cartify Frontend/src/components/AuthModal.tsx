@@ -10,6 +10,24 @@ interface AuthModalProps {
   onLoginSuccess: (user: any) => void;
 }
 
+const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  showToast,
+  onLoginSuccess
+}) => {
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    otp: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -450,3 +468,5 @@ interface AuthModalProps {
     </AnimatePresence>
   );
 };
+
+export default AuthModal;
