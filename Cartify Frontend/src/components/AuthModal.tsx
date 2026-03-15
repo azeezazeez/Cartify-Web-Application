@@ -11,7 +11,8 @@ interface User {
   id: string;
   email: string;
   username: string;
-  // Add other user properties as needed
+  role?: string;
+  token?: string;
 }
 
 interface AuthResponse {
@@ -21,6 +22,12 @@ interface AuthResponse {
   id?: string;
   message?: string;
   error?: string;
+}
+
+interface MessageData {
+  type: string;
+  user?: User;
+  message?: string;
 }
 
 interface AuthModalProps {
@@ -52,12 +59,16 @@ const AuthModal: React.FC<AuthModalProps> = ({
   const modalRef = useRef<HTMLDivElement>(null);
   const messageHandlerRef = useRef<((event: MessageEvent) => void) | null>(null);
   const popupRef = useRef<Window | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup event listener on unmount
   useEffect(() => {
     return () => {
       if (messageHandlerRef.current) {
         window.removeEventListener('message', messageHandlerRef.current);
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
       if (popupRef.current && !popupRef.current.closed) {
         popupRef.current.close();
@@ -79,15 +90,43 @@ const AuthModal: React.FC<AuthModalProps> = ({
         confirmNewPassword: ''
       });
       setIsLoading(false);
+      
+      // Clean up any existing popup intervals
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     }
   }, [isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
+      // Common validations
+      if (!formData.email) {
+        throw new Error('Email is required');
+      }
+      
+      if (!validateEmail(formData.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
       if (mode === 'register') {
+        if (!formData.name) {
+          throw new Error('Name is required');
+        }
+        
+        if (!formData.password) {
+          throw new Error('Password is required');
+        }
+        
         if (formData.password !== formData.confirmPassword) {
           throw new Error('Passwords do not match');
         }
@@ -103,7 +142,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           role: 'USER'
         };
 
-        const response: AuthResponse = await api.register(userData);
+        const response = await api.register(userData) as AuthResponse;
 
         if (response?.success || response?.data || response?.user || response?.id) {
           showToast('Registration successful! You can now sign in.', 'success');
@@ -119,8 +158,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
         }
 
       } else if (mode === 'login') {
-        if (!formData.email || !formData.password) {
-          throw new Error('Please enter email and password');
+        if (!formData.password) {
+          throw new Error('Password is required');
         }
 
         const credentials = {
@@ -128,7 +167,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           password: formData.password
         };
 
-        const response: AuthResponse = await api.login(credentials);
+        const response = await api.login(credentials) as AuthResponse;
 
         if (response?.user) {
           showToast('Login successful!', 'success');
@@ -144,29 +183,33 @@ const AuthModal: React.FC<AuthModalProps> = ({
           });
           onClose();
         } else {
-          throw new Error('Login failed - no user data received');
+          throw new Error(response?.message || 'Login failed - no user data received');
         }
 
       } else if (mode === 'forgot-password') {
-        if (!formData.email) {
-          throw new Error('Please enter your email');
-        }
-
         await api.generateOtp(formData.email);
         showToast('OTP sent to your email!', 'success');
         setMode('reset-password');
 
       } else if (mode === 'reset-password') {
+        if (!formData.otp) {
+          throw new Error('OTP is required');
+        }
+        
+        if (formData.otp.length !== 6) {
+          throw new Error('Please enter a valid 6-digit OTP');
+        }
+        
+        if (!formData.newPassword) {
+          throw new Error('New password is required');
+        }
+        
         if (formData.newPassword !== formData.confirmNewPassword) {
           throw new Error('Passwords do not match');
         }
 
         if (formData.newPassword.length < 6) {
           throw new Error('Password must be at least 6 characters long');
-        }
-
-        if (!formData.otp || formData.otp.length !== 6) {
-          throw new Error('Please enter a valid 6-digit OTP');
         }
 
         await api.resetPassword({
@@ -218,6 +261,11 @@ const AuthModal: React.FC<AuthModalProps> = ({
         throw new Error('API URL not configured');
       }
 
+      // Close any existing popup
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+      }
+
       const popup = window.open(
         `${apiUrl}/auth/${provider}`,
         `${provider} Auth`,
@@ -237,8 +285,10 @@ const AuthModal: React.FC<AuthModalProps> = ({
         // Validate event data
         if (!event.data || typeof event.data !== 'object') return;
 
-        if (event.data.type === 'AUTH_SUCCESS' && event.data.user) {
-          onLoginSuccess(event.data.user as User);
+        const data = event.data as MessageData;
+
+        if (data.type === 'AUTH_SUCCESS' && data.user) {
+          onLoginSuccess(data.user);
           showToast(`Successfully logged in with ${provider}!`, 'success');
           
           // Clean up
@@ -246,16 +296,24 @@ const AuthModal: React.FC<AuthModalProps> = ({
           if (popup && !popup.closed) {
             popup.close();
           }
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           
           onClose();
-        } else if (event.data.type === 'AUTH_ERROR') {
-          const errorMessage = event.data.message || `${provider} login failed`;
+        } else if (data.type === 'AUTH_ERROR') {
+          const errorMessage = data.message || `${provider} login failed`;
           showToast(errorMessage, 'error');
           
           // Clean up
           window.removeEventListener('message', messageHandler);
           if (popup && !popup.closed) {
             popup.close();
+          }
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
           }
           
           setIsLoading(false);
@@ -266,12 +324,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
       window.addEventListener('message', messageHandler);
 
       // Check if popup was closed by user
-      const checkPopupClosed = setInterval(() => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
+      intervalRef.current = setInterval(() => {
         if (popup.closed) {
-          clearInterval(checkPopupClosed);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           window.removeEventListener('message', messageHandler);
           setIsLoading(false);
-          showToast(`${provider} login cancelled`, 'info');
         }
       }, 1000);
 
@@ -302,19 +366,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleCloseClick = (e: React.MouseEvent) => {
+  const handleCloseClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
     e.stopPropagation();
     onClose();
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    // Only close if clicking the backdrop itself, not children
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    onClose();
   };
 
-  const handleModalClick = (e: React.MouseEvent) => {
+  const handleModalClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
   };
 
@@ -334,10 +397,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
     }));
   };
 
+  const handleForgotPassword = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    setMode('forgot-password');
+  };
+
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
         key="backdrop"
         initial={{ opacity: 0 }}
@@ -352,7 +420,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        transition={{ type: 'spring', duration: 0.5 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         onClick={handleModalClick}
         className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[100001] rounded-3xl overflow-hidden shadow-2xl p-8"
       >
@@ -377,7 +445,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
         <form className="space-y-4" onSubmit={handleSubmit} noValidate>
           {mode === 'register' && (
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
               <input
                 type="text"
                 name="name"
@@ -393,7 +461,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {(mode === 'login' || mode === 'register' || mode === 'forgot-password' || mode === 'reset-password') && (
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
               <input
                 type="email"
                 name="email"
@@ -410,7 +478,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === 'reset-password' && (
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
               <input
                 type="text"
                 name="otp"
@@ -427,7 +495,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {(mode === 'login' || mode === 'register') && (
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
               <input
                 type="password"
                 name="password"
@@ -443,7 +511,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === 'register' && (
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
               <input
                 type="password"
                 name="confirmPassword"
@@ -460,7 +528,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
           {mode === 'reset-password' && (
             <>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
                 <input
                   type="password"
                   name="newPassword"
@@ -473,7 +541,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
                 />
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-400 pointer-events-none" />
                 <input
                   type="password"
                   name="confirmNewPassword"
@@ -492,7 +560,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
             <div className="text-right">
               <button
                 type="button"
-                onClick={() => setMode('forgot-password')}
+                onClick={handleForgotPassword}
                 className="text-xs font-bold text-brand-500 hover:text-brand-950 dark:hover:text-white uppercase tracking-widest"
                 disabled={isLoading}
               >
