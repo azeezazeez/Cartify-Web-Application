@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, ArrowRight, Github, Chrome, Loader2 } from 'lucide-react';
 import { api } from '../services/api'; // Adjust the import path as needed
@@ -27,6 +27,18 @@ const AuthModal: React.FC<AuthModalProps> = ({
     newPassword: '',
     confirmNewPassword: ''
   });
+
+  // Add ref for message handler to use in cleanup
+  const messageHandlerRef = useRef<(event: MessageEvent) => void>();
+
+  // Cleanup event listener on unmount
+  useEffect(() => {
+    return () => {
+      if (messageHandlerRef.current) {
+        window.removeEventListener('message', messageHandlerRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +83,6 @@ const AuthModal: React.FC<AuthModalProps> = ({
 
           // Switch to login mode
           setMode('login');
-
-          // Optional: Auto-fill email for convenience
-          // setFormData(prev => ({ ...prev, email: formData.email }));
         } else {
           // If response has a message, show it
           const errorMessage = response?.message || response?.error || 'Registration failed';
@@ -184,7 +193,15 @@ const AuthModal: React.FC<AuthModalProps> = ({
         `width=${width},height=${height},left=${left},top=${top}`
       );
 
+      // Check if popup was blocked
+      if (!popup) {
+        throw new Error('Popup was blocked. Please allow popups for this site.');
+      }
+
       const messageHandler = (event: MessageEvent) => {
+        // Add null check for event.origin
+        if (!event.origin) return;
+        
         if (event.origin !== process.env.REACT_APP_API_URL) return;
 
         if (event.data.type === 'AUTH_SUCCESS' && event.data.user) {
@@ -200,6 +217,8 @@ const AuthModal: React.FC<AuthModalProps> = ({
         }
       };
 
+      // Store the handler in ref for cleanup
+      messageHandlerRef.current = messageHandler;
       window.addEventListener('message', messageHandler);
 
       const checkPopupClosed = setInterval(() => {
@@ -211,7 +230,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       }, 1000);
 
     } catch (error) {
-      showToast(`${provider} login failed`, 'error');
+      showToast(error instanceof Error ? error.message : `${provider} login failed`, 'error');
       setIsLoading(false);
     }
   };
@@ -222,6 +241,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       case 'register': return 'Create Account';
       case 'forgot-password': return 'Forgot Password';
       case 'reset-password': return 'Reset Password';
+      default: return ''; // Add default return
     }
   };
 
@@ -231,8 +251,26 @@ const AuthModal: React.FC<AuthModalProps> = ({
       case 'register': return 'Join cartify for a premium shopping experience';
       case 'forgot-password': return 'Enter your email to receive a password reset OTP';
       case 'reset-password': return 'Enter the OTP sent to your email and your new password';
+      default: return ''; // Add default return
     }
   };
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setMode('login');
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        otp: '',
+        newPassword: '',
+        confirmNewPassword: ''
+      });
+      setIsLoading(false);
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -254,6 +292,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
             <button
               onClick={onClose}
               className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors"
+              type="button"
             >
               <X className="w-6 h-6" />
             </button>
