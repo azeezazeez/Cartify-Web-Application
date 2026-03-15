@@ -247,12 +247,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
             className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[210] rounded-3xl overflow-hidden shadow-2xl p-8"
           >
             {/* Fixed X button with higher z-index and pointer events */}
-            <button
+             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-[220] cursor-pointer"
+              className="absolute top-2 right-2 md:top-4 md:right-4 p-3 md:p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-10 touch-manipulation"
+              style={{ minWidth: '44px', minHeight: '44px' }}
               type="button"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 md:w-6 md:h-6" />
             </button>
 
             <div className="text-center mb-8">
