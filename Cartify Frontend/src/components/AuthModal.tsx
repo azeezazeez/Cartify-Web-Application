@@ -10,33 +10,6 @@ interface AuthModalProps {
   onLoginSuccess: (user: any) => void;
 }
 
-export const AuthModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[20000]"
-      onClick={onClose}
-    >
-      <div
-        className="relative bg-white p-6 rounded-xl w-[350px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 text-gray-600 hover:text-black"
-        >
-          ✕
-        </button>
-
-        <h2 className="text-xl font-semibold mb-4">Sign In</h2>
-
-      </div>
-    </div>
-  );
-};
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
