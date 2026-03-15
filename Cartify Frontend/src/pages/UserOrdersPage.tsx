@@ -256,10 +256,10 @@ export const UserOrdersPage = () => {
                                             <div className="flex items-center space-x-2">
                                                 <DollarSign className="w-4 h-4 text-brand-400" />
                                                 <span className="text-sm font-medium text-brand-950 dark:text-white">
-                                                    ₹{order.totalAmount?.toFixed(2)}
+                                                    ${order.totalAmount?.toFixed(2)}
                                                 </span>
                                             </div>
-                                            <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ₹{getStatusColor(order.status)}`}>
+                                            <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                                                 {getStatusIcon(order.status)}
                                                 <span className="capitalize">{order.status?.toLowerCase()}</span>
                                             </span>
@@ -289,7 +289,7 @@ export const UserOrdersPage = () => {
                                                             Qty: {item.quantity}
                                                         </span>
                                                         <span className="text-sm text-brand-500">
-                                                            ₹{item.price?.toFixed(2)} each
+                                                            ${item.price?.toFixed(2)} each
                                                         </span>
                                                     </div>
                                                 </div>
@@ -297,7 +297,7 @@ export const UserOrdersPage = () => {
                                                 {/* Total */}
                                                 <div className="text-right">
                                                     <p className="font-medium text-brand-950 dark:text-white">
-                                                        ₹{item.total?.toFixed(2)}
+                                                        ${item.total?.toFixed(2)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -309,7 +309,7 @@ export const UserOrdersPage = () => {
                                         <div className="text-right">
                                             <p className="text-sm text-brand-500 dark:text-brand-400">Total</p>
                                             <p className="text-xl font-bold text-brand-950 dark:text-white">
-                                                ₹{order.totalAmount?.toFixed(2)}
+                                                ${order.totalAmount?.toFixed(2)}
                                             </p>
                                         </div>
                                     </div>
@@ -406,7 +406,7 @@ const OrderDetailsModal = ({
                             </div>
                             <div>
                                 <p className="text-sm text-brand-500 dark:text-brand-400">Status</p>
-                                <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ₹{getStatusColor(order.status)}`}>
+                                <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                                     {getStatusIcon(order.status)}
                                     <span className="capitalize">{order.status?.toLowerCase()}</span>
                                 </span>
@@ -414,7 +414,7 @@ const OrderDetailsModal = ({
                             <div>
                                 <p className="text-sm text-brand-500 dark:text-brand-400">Total Amount</p>
                                 <p className="text-lg font-bold text-brand-950 dark:text-white">
-                                    ₹{order.totalAmount?.toFixed(2)}
+                                    ${order.totalAmount?.toFixed(2)}
                                 </p>
                             </div>
                         </div>
@@ -440,13 +440,13 @@ const OrderDetailsModal = ({
                                                 Qty: {item.quantity}
                                             </span>
                                             <span className="text-sm text-brand-500">
-                                                ₹{item.price?.toFixed(2)} each
+                                                ${item.price?.toFixed(2)} each
                                             </span>
                                         </div>
                                     </div>
                                     <div className="text-right">
                                         <p className="font-medium text-brand-950 dark:text-white">
-                                            ₹{item.total?.toFixed(2)}
+                                            ${item.total?.toFixed(2)}
                                         </p>
                                     </div>
                                 </div>
@@ -458,7 +458,7 @@ const OrderDetailsModal = ({
                             <div className="flex justify-between mb-2">
                                 <span className="text-brand-600 dark:text-brand-300">Subtotal</span>
                                 <span className="font-medium text-brand-950 dark:text-white">
-                                    ₹{order.totalAmount?.toFixed(2)}
+                                    ${order.totalAmount?.toFixed(2)}
                                 </span>
                             </div>
                             <div className="flex justify-between mb-2">
@@ -468,7 +468,7 @@ const OrderDetailsModal = ({
                             <div className="flex justify-between pt-2 border-t border-brand-100 dark:border-brand-800">
                                 <span className="text-lg font-bold text-brand-950 dark:text-white">Total</span>
                                 <span className="text-lg font-bold text-brand-950 dark:text-white">
-                                    ₹{order.totalAmount?.toFixed(2)}
+                                    ${order.totalAmount?.toFixed(2)}
                                 </span>
                             </div>
                         </div>
