@@ -232,10 +232,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className={cn("ml-2 p-1 rounded-full hover:bg-black/10 transition-colors flex-shrink-0")}
+                className="ml-2 p-1 rounded-full bg-brand-100 hover:bg-brand-200 transition-colors flex-shrink-0"
                 aria-label="Clear search"
               >
-                <X className={cn("w-3 h-3", iconColor)} />
+                <X className="w-3 h-3 text-brand-600" />
               </button>
             )}
           </form>
