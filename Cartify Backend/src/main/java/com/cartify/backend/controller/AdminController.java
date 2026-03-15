@@ -162,14 +162,32 @@ public class AdminController {
         }
     }
 
-    // 6️⃣ Get all customers
+    // 6️⃣ Get all customers with calculated total orders and total spent
     @GetMapping("/customers")
     public ResponseEntity<ApiResponse<List<AdminCustomerDTO>>> getAllCustomers() {
         try {
             List<User> users = userRepository.findAll();
+            
+            // Get all orders to calculate customer stats
+            List<Order> allOrders = orderRepository.findAll();
+            
+            // Create a map to store customer stats
+            Map<Long, CustomerStats> customerStatsMap = new HashMap<>();
+            
+            // Calculate stats for each customer
+            for (Order order : allOrders) {
+                Long userId = order.getUserId(); // Fixed: Changed from getUser().getId() to getUserId()
+                CustomerStats stats = customerStatsMap.getOrDefault(userId, new CustomerStats(0, 0.0));
+                stats.setTotalOrders(stats.getTotalOrders() + 1);
+                stats.setTotalSpent(stats.getTotalSpent() + order.getTotalAmount());
+                customerStatsMap.put(userId, stats);
+            }
 
             List<AdminCustomerDTO> customerDTOs = users.stream()
-                    .map(AdminCustomerDTO::fromUser)
+                    .map(user -> {
+                        CustomerStats stats = customerStatsMap.getOrDefault(user.getId(), new CustomerStats(0, 0.0));
+                        return AdminCustomerDTO.fromUser(user, stats.getTotalOrders(), stats.getTotalSpent());
+                    })
                     .collect(Collectors.toList());
 
             return ResponseEntity.ok(
@@ -182,15 +200,23 @@ public class AdminController {
         }
     }
 
-    // 7️⃣ Get customer by ID
+    // 7️⃣ Get customer by ID with calculated stats
     @GetMapping("/customers/{customerId}")
     public ResponseEntity<ApiResponse<AdminCustomerDTO>> getCustomerById(@PathVariable Long customerId) {
         try {
             User user = userRepository.findById(customerId)
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
+            
+            // Calculate customer stats
+            List<Order> customerOrders = orderRepository.findByUserIdOrderByOrderDateDesc(customerId);
+            int totalOrders = customerOrders.size();
+            double totalSpent = customerOrders.stream()
+                    .mapToDouble(Order::getTotalAmount)
+                    .sum();
 
             return ResponseEntity.ok(
-                    ApiResponse.success("Customer fetched successfully", AdminCustomerDTO.fromUser(user))
+                    ApiResponse.success("Customer fetched successfully", 
+                            AdminCustomerDTO.fromUser(user, totalOrders, totalSpent))
             );
         } catch (Exception e) {
             return ResponseEntity
@@ -218,6 +244,23 @@ public class AdminController {
                     .body(ApiResponse.error("Failed to fetch customer orders: " + e.getMessage()));
         }
     }
+}
+
+// Helper class for customer stats
+class CustomerStats {
+    private int totalOrders;
+    private double totalSpent;
+    
+    public CustomerStats(int totalOrders, double totalSpent) {
+        this.totalOrders = totalOrders;
+        this.totalSpent = totalSpent;
+    }
+    
+    public int getTotalOrders() { return totalOrders; }
+    public void setTotalOrders(int totalOrders) { this.totalOrders = totalOrders; }
+    
+    public double getTotalSpent() { return totalSpent; }
+    public void setTotalSpent(double totalSpent) { this.totalSpent = totalSpent; }
 }
 
 // DTOs
@@ -277,7 +320,7 @@ class AdminCustomerDTO {
     private int totalOrders;
     private double totalSpent;
 
-    public static AdminCustomerDTO fromUser(User user) {
+    public static AdminCustomerDTO fromUser(User user, int totalOrders, double totalSpent) {
         AdminCustomerDTO dto = new AdminCustomerDTO();
         dto.setId(user.getId());
         dto.setName(user.getUsername());
@@ -285,8 +328,8 @@ class AdminCustomerDTO {
         dto.setRole(user.getRole());
         dto.setJoinedDate(user.getCreatedAt() != null ?
                 user.getCreatedAt().toLocalDate().toString() : "N/A");
-        dto.setTotalOrders(0); // You can calculate this from orders
-        dto.setTotalSpent(0.0); // You can calculate this from orders
+        dto.setTotalOrders(totalOrders);
+        dto.setTotalSpent(totalSpent);
         return dto;
     }
 
