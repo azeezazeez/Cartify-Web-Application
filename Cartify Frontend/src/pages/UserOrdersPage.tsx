@@ -253,9 +253,9 @@ export const UserOrdersPage = () => {
                                                 <span className="text-sm text-brand-600 dark:text-brand-300">
                                                     {formatDate(order.orderDate)}
                                                 </span>
-                                            </div>
+                                            </div> 
                                             <div className="flex items-center space-x-2">
-                                                <DollarSign className="w-4 h-4 text-brand-400" />
+                                                <IndianRupee className="w-4 h-4 text-brand-400" />
                                                 <span className="text-sm font-medium text-brand-950 dark:text-white">
                                                     ${order.totalAmount?.toFixed(2)}
                                                 </span>
