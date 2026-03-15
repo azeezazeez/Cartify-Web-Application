@@ -398,7 +398,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               style={{ backgroundColor: '#ffffff' }}
-              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] z-[2147483647] shadow-2xl flex flex-col"
+             className="fixed top-0 left-0 h-screen w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
             >
               {/* Header - White background, dark text */}
               <div style={{ backgroundColor: '#ffffff', borderBottomColor: '#e5e7eb' }} className="flex items-center justify-between p-6 border-b">
