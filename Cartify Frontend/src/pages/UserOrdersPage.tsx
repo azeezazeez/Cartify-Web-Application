@@ -259,7 +259,7 @@ export const UserOrdersPage = () => {
                                                     ₹{order.totalAmount?.toFixed(2)}
                                                 </span>
                                             </div>
-                                            <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                            <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ₹{getStatusColor(order.status)}`}>
                                                 {getStatusIcon(order.status)}
                                                 <span className="capitalize">{order.status?.toLowerCase()}</span>
                                             </span>
@@ -406,7 +406,7 @@ const OrderDetailsModal = ({
                             </div>
                             <div>
                                 <p className="text-sm text-brand-500 dark:text-brand-400">Status</p>
-                                <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
+                                <span className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium ₹{getStatusColor(order.status)}`}>
                                     {getStatusIcon(order.status)}
                                     <span className="capitalize">{order.status?.toLowerCase()}</span>
                                 </span>
