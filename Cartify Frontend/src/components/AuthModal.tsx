@@ -23,21 +23,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
     confirmNewPassword: ''
   });
 
-  const handleClose = () => {
-    // Reset form when closing
-    setFormData({
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      otp: '',
-      newPassword: '',
-      confirmNewPassword: ''
-    });
-    setMode('login');
-    onClose();
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -252,7 +237,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={handleClose}
+            onClick={onClose}
             className="fixed inset-0 bg-black/60 backdrop-blur-md z-[200]"
           />
           <motion.div
@@ -261,9 +246,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-white dark:bg-brand-900 z-[210] rounded-3xl overflow-hidden shadow-2xl p-8"
           >
+            {/* Fixed X button with higher z-index and pointer events */}
             <button
-              onClick={handleClose}
-              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors"
+              onClick={onClose}
+              className="absolute top-4 right-4 p-2 hover:bg-brand-100 dark:hover:bg-brand-800 rounded-full transition-colors z-[220] cursor-pointer"
+              type="button"
             >
               <X className="w-6 h-6" />
             </button>
