@@ -72,6 +72,18 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [isMobileMenuOpen]);
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchValue(e.target.value);
     onSearch(e.target.value);
@@ -121,7 +133,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleMobileSearchClick = () => {
     setIsMobileMenuOpen(false);
     setIsSearchOpen(true);
-    // Focus will happen via useEffect
   };
 
   // Handle search submission
@@ -129,24 +140,20 @@ export const Navbar: React.FC<NavbarProps> = ({
     e.preventDefault();
     if (searchValue.trim()) {
       onSearch(searchValue.trim());
-      // Optionally navigate to search results page
-      // navigate(`/search?q=${encodeURIComponent(searchValue)}`);
     }
   };
 
   // Dynamic text color based on scroll state
   const getTextColor = () => {
-    if (isScrolled) return 'text-gray-900'; // Dark text when scrolled (on light background)
-    return 'text-white'; // Light text when at top (on dark background)
+    if (isScrolled) return 'text-gray-900';
+    return 'text-white';
   };
 
-  // Dynamic logo color based on scroll state
   const getLogoColor = () => {
     if (isScrolled) return 'text-brand-950';
     return 'text-white';
   };
 
-  // Dynamic button background hover based on scroll state
   const getButtonHoverColor = () => {
     if (isScrolled) return 'hover:bg-brand-100';
     return 'hover:bg-white/20';
@@ -183,7 +190,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Mobile Menu Toggle - Always visible on mobile */}
+        {/* Mobile Menu Toggle */}
         <button
           className={cn(
             "lg:hidden p-2 rounded-full transition-colors",
@@ -196,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
-        {/* Logo - Center on mobile, left on desktop */}
+        {/* Logo */}
         <div className="flex-1 lg:flex-none flex justify-center lg:justify-start">
           <Link
             to="/"
@@ -241,9 +248,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           </a>
         </div>
 
-        {/* Actions - Consistent styling for all devices */}
+        {/* Actions */}
         <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
-          {/* Search input - Now visible on all devices when open */}
+          {/* Search input */}
           <form 
             onSubmit={handleSearchSubmit}
             className={cn(
@@ -277,7 +284,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </form>
 
-          {/* Search toggle button - Visible on all devices */}
+          {/* Search toggle button */}
           <button
             onClick={handleSearchToggle}
             className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
@@ -286,7 +293,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Search className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          {/* Wishlist link */}
+          {/* Wishlist - Desktop only */}
           <Link
             to="/wishlist"
             onClick={() => setIsMobileMenuOpen(false)}
@@ -301,11 +308,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </Link>
 
-          {/* User menu */}
-          <div className="relative">
+          {/* User menu - Desktop only */}
+          <div className="relative hidden sm:block">
             <button
               onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
-              className={cn("p-1.5 sm:p-2 rounded-full transition-colors hidden sm:block", buttonBgHover, textColor)}
+              className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
               aria-label="User menu"
             >
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -323,7 +330,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest">Signed in as</p>
                     <p className="text-xs sm:text-sm font-medium truncate text-gray-900">{user.email}</p>
                   </div>
-
                   <Link
                     to="/my-orders"
                     className="flex items-center px-4 py-2 text-xs sm:text-sm text-gray-900 hover:bg-brand-50 transition-colors"
@@ -332,7 +338,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <Package className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-brand-400" />
                     My Orders
                   </Link>
-
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
@@ -342,7 +347,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     Profile Settings
                   </button>
-
                   <button
                     onClick={() => {
                       setIsUserMenuOpen(false);
@@ -373,134 +377,141 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[60]"
+              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
             />
+            
+            {/* Menu Panel */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 bottom-0 w-[85%] sm:w-[80%] max-w-sm bg-white z-[70] p-6 sm:p-8 shadow-2xl overflow-y-auto"
+              className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] bg-white z-[70] shadow-2xl flex flex-col"
             >
-              <div className="flex justify-between items-center mb-8 sm:mb-12">
-                <span className="text-xl sm:text-2xl font-serif font-bold tracking-tighter text-brand-950">CARTIFY</span>
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-brand-100">
+                <span className="text-xl font-serif font-bold tracking-tighter text-brand-950">
+                  CARTIFY
+                </span>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)} 
-                  className="p-1.5 sm:p-2 text-gray-900 hover:bg-brand-50 rounded-full transition-colors"
+                  className="p-2 text-gray-900 hover:bg-brand-50 rounded-full transition-colors"
                   aria-label="Close menu"
                 >
-                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
               
-              {/* User info section - Mobile only */}
-              {user && (
-                <div className="mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-brand-100">
-                  <p className="text-[10px] sm:text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Signed in as</p>
-                  <p className="text-sm sm:text-base font-medium text-gray-900 truncate">{user.email}</p>
+              {/* Menu Items - Exactly as shown in your image */}
+              <div className="flex-1 overflow-y-auto py-6 px-6">
+                <div className="flex flex-col space-y-1">
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'Shop All')}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    Shop All
+                  </a>
+                  <Link
+                    to="/new-arrivals"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    New Arrivals
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'Best Sellers')}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    Best Sellers
+                  </a>
+                  <Link
+                    to="/sustainability"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    Sustainability
+                  </Link>
+                  <Link
+                    to="/my-orders"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/wishlist"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between"
+                  >
+                    <span>Wishlist</span>
+                    {wishlistCount > 0 && (
+                      <span className="bg-brand-950 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'Our Story')}
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                  >
+                    Our Story
+                  </a>
                 </div>
-              )}
-              
-              <div className="flex flex-col space-y-4 sm:space-y-6">
-                <a
-                  href="#"
-                  onClick={(e) => handleLinkClick(e, 'Shop All')}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  Shop All
-                </a>
-                <Link
-                  to="/new-arrivals"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  New Arrivals
-                </Link>
-                <a
-                  href="#"
-                  onClick={(e) => handleLinkClick(e, 'Best Sellers')}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  Best Sellers
-                </a>
-                <Link
-                  to="/sustainability"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  Sustainability
-                </Link>
-                <Link
-                  to="/my-orders"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  My Orders
-                </Link>
-                <Link
-                  to="/wishlist"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="sm:hidden flex items-center justify-between text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  <span>Wishlist</span>
-                  {wishlistCount > 0 && (
-                    <span className="bg-brand-950 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                      {wishlistCount}
-                    </span>
-                  )}
-                </Link>
-                <a
-                  href="#"
-                  onClick={(e) => handleLinkClick(e, 'Our Story')}
-                  className="text-gray-900 hover:text-brand-600 hover:pl-2 transition-all cursor-pointer text-base sm:text-lg font-medium"
-                >
-                  Our Story
-                </a>
               </div>
 
-              <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-brand-100">
-                {!user && (
+              {/* Footer Actions */}
+              <div className="border-t border-brand-100 p-6">
+                <div className="flex flex-col space-y-3">
+                  {!user ? (
+                    <div
+                      onClick={() => {
+                        onAuthClick();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <User className="w-5 h-5" />
+                      <span className="text-base font-medium">Sign In / Register</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="px-4 py-2">
+                        <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Signed in as</p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="flex items-center space-x-3 py-3 text-red-500 hover:bg-red-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                      >
+                        <span>Logout</span>
+                      </button>
+                    </>
+                  )}
+                  
                   <div
-                    onClick={() => {
-                      onAuthClick();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex items-center space-x-3 sm:space-x-4 mb-4 sm:mb-6 cursor-pointer text-gray-900 hover:text-brand-600 hover:pl-2 transition-all"
+                    onClick={handleMobileSearchClick}
+                    className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
                   >
-                    <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base font-medium">Sign In / Register</span>
+                    <Search className="w-5 h-5" />
+                    <span className="text-base font-medium">Search</span>
                   </div>
-                )}
-                
-                {/* Mobile search option */}
-                <div
-                  onClick={handleMobileSearchClick}
-                  className="flex items-center space-x-3 sm:space-x-4 cursor-pointer text-gray-900 hover:text-brand-600 hover:pl-2 transition-all"
-                >
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="text-sm sm:text-base font-medium">Search</span>
                 </div>
-
-                {user && (
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      onLogout();
-                    }}
-                    className="w-full text-left mt-6 sm:mt-8 py-2 px-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-sm sm:text-base font-medium"
-                  >
-                    Logout
-                  </button>
-                )}
               </div>
             </motion.div>
           </>
