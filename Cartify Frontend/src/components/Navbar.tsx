@@ -143,53 +143,54 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // FIX 1: Icons always white regardless of theme or scroll state
+  // Dynamic text color based on scroll state
   const getTextColor = () => {
-    return 'text-white'; // Always white
+    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    return 'text-white';
   };
 
   const getLogoColor = () => {
-    return 'text-white'; // Always white
+    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    return 'text-white';
+  };
+
+  const getButtonHoverColor = () => {
+    if (isScrolled) return 'hover:bg-white/20'; // CHANGED: Keep white hover
+    return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
-    return 'text-white'; // Always white
+    if (isScrolled) return 'text-white'; // CHANGED: Always white when scrolled
+    return 'text-white';
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const iconColor = getIconColor();
-  
-  // Keep hover effects subtle
   const hoverColor = 'hover:text-white/80';
-  const buttonBgHover = 'hover:bg-white/20';
-  
-  // Search styling
+  const buttonBgHover = getButtonHoverColor();
   const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20';
   const searchTextColor = 'text-white';
   const searchPlaceholderColor = 'placeholder-white/70';
+  const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
-    return 'text-white'; // Always white
+    if (isMobileMenuOpen) return 'text-gray-900';
+    return 'text-white'; // CHANGED: Always white when not in mobile menu
   };
-
-  // FIX 2: Prevent navbar compression - fixed height
-  const navbarClasses = cn(
-    'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
-    'h-16 sm:h-20', // Fixed height - 64px on mobile, 80px on desktop
-    'flex items-center',
-    isScrolled 
-      ? 'bg-black/80 backdrop-blur-md shadow-md' 
-      : 'bg-transparent',
-    'overflow-visible shrink-0'
-  );
 
   return (
     <nav
       ref={navbarRef}
-      className={navbarClasses}
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
+        'h-16 sm:h-20 flex items-center', // ADDED: Fixed height to prevent compression
+        isScrolled 
+          ? 'glass bg-black/80 backdrop-blur-md shadow-md' // CHANGED: Darker background for white icons
+          : 'bg-transparent',
+        'overflow-visible shrink-0' // ADDED: Prevent shrinking
+      )}
     >
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full"> {/* ADDED: w-full and h-full */}
         {/* Mobile Menu Toggle */}
         <button
           className={cn(
@@ -276,10 +277,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={handleClearSearch}
-                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-white/20 hover:bg-white/30 transition-colors flex-shrink-0"
+                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-brand-100 hover:bg-brand-200 transition-colors flex-shrink-0"
                 aria-label="Clear search"
               >
-                <X className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
+                <X className="w-2 h-2 sm:w-3 sm:h-3 text-brand-600" />
               </button>
             )}
           </form>
@@ -302,7 +303,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
             {wishlistCount > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-600 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
                 {wishlistCount}
               </span>
             )}
@@ -369,7 +370,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-600 text-white">
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-brand-950 text-white">
                 {cartCount}
               </span>
             )}
