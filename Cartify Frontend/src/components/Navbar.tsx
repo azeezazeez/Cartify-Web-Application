@@ -377,7 +377,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Pure white background with black text */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -390,7 +390,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60]"
             />
             
-            {/* Menu Panel */}
+            {/* Menu Panel - Pure white background */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -398,66 +398,66 @@ export const Navbar: React.FC<NavbarProps> = ({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 left-0 bottom-0 w-[280px] sm:w-[320px] bg-white z-[70] shadow-2xl flex flex-col"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-brand-100">
-                <span className="text-xl font-serif font-bold tracking-tighter text-brand-950">
+              {/* Header - White background, dark text */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
+                <span className="text-xl font-serif font-bold tracking-tighter text-gray-900">
                   CARTIFY
                 </span>
                 <button 
                   onClick={() => setIsMobileMenuOpen(false)} 
-                  className="p-2 text-gray-900 hover:bg-brand-50 rounded-full transition-colors"
+                  className="p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
                   aria-label="Close menu"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
               
-              {/* Menu Items - Exactly as shown in your image */}
-              <div className="flex-1 overflow-y-auto py-6 px-6">
+              {/* Menu Items - Black text on white background */}
+              <div className="flex-1 overflow-y-auto py-6 px-6 bg-white">
                 <div className="flex flex-col space-y-1">
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Shop All')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     Shop All
                   </a>
                   <Link
                     to="/new-arrivals"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     New Arrivals
                   </Link>
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Best Sellers')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     Best Sellers
                   </a>
                   <Link
                     to="/sustainability"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     Sustainability
                   </Link>
                   <Link
                     to="/my-orders"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     My Orders
                   </Link>
                   <Link
                     to="/wishlist"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between"
                   >
                     <span>Wishlist</span>
                     {wishlistCount > 0 && (
-                      <span className="bg-brand-950 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      <span className="bg-brand-600 text-white text-xs font-bold px-2 py-1 rounded-full">
                         {wishlistCount}
                       </span>
                     )}
@@ -465,15 +465,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <a
                     href="#"
                     onClick={(e) => handleLinkClick(e, 'Our Story')}
-                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                    className="py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                   >
                     Our Story
                   </a>
                 </div>
               </div>
 
-              {/* Footer Actions */}
-              <div className="border-t border-brand-100 p-6">
+              {/* Footer Actions - White background, black text */}
+              <div className="border-t border-gray-200 p-6 bg-white">
                 <div className="flex flex-col space-y-3">
                   {!user ? (
                     <div
@@ -481,15 +481,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                         onAuthClick();
                         setIsMobileMenuOpen(false);
                       }}
-                      className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
                     >
-                      <User className="w-5 h-5" />
+                      <User className="w-5 h-5 text-gray-700" />
                       <span className="text-base font-medium">Sign In / Register</span>
                     </div>
                   ) : (
                     <>
                       <div className="px-4 py-2">
-                        <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Signed in as</p>
+                        <p className="text-xs font-bold text-brand-500 uppercase tracking-widest mb-1">Signed in as</p>
                         <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
                       </div>
                       <button
@@ -497,7 +497,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           setIsMobileMenuOpen(false);
                           onLogout();
                         }}
-                        className="flex items-center space-x-3 py-3 text-red-500 hover:bg-red-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
+                        className="flex items-center space-x-3 py-3 text-red-600 hover:bg-red-50 px-4 -mx-4 rounded-lg transition-colors text-base font-medium"
                       >
                         <span>Logout</span>
                       </button>
@@ -506,9 +506,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   
                   <div
                     onClick={handleMobileSearchClick}
-                    className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-brand-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
+                    className="flex items-center space-x-3 py-3 text-gray-900 hover:text-brand-600 hover:bg-gray-50 px-4 -mx-4 rounded-lg transition-colors cursor-pointer"
                   >
-                    <Search className="w-5 h-5" />
+                    <Search className="w-5 h-5 text-gray-700" />
                     <span className="text-base font-medium">Search</span>
                   </div>
                 </div>
