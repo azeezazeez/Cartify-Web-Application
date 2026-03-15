@@ -382,14 +382,14 @@ export const Navbar: React.FC<NavbarProps> = ({
         {isMobileMenuOpen && (
           <>
             {/* Backdrop - Increased z-index */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-              className="fixed inset-0 backdrop-blur-sm z-[9999]"
-            />
+           <motion.div
+  initial={{ x: '-100%' }}
+  animate={{ x: 0 }}
+  exit={{ x: '-100%' }}
+  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+  style={{ backgroundColor: '#ffffff' }}
+  className="fixed top-0 left-0 h-screen w-[280px] sm:w-[320px] z-[10000] shadow-2xl flex flex-col"
+>
             
             {/* Menu Panel - Increased z-index */}
             <motion.div
