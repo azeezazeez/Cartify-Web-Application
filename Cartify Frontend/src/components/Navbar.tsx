@@ -44,6 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPastProductsSection, setIsPastProductsSection] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -51,6 +52,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      
+      // Check if we've passed the products section
+      const productsSection = document.querySelector('.products-grid') ||
+        document.querySelector('.product-grid') ||
+        document.querySelector('[data-testid="products-grid"]') ||
+        document.querySelector('section.grid') ||
+        document.querySelector('.grid-cols-1') ||
+        document.querySelector('.grid-cols-2') ||
+        document.querySelector('.grid-cols-3') ||
+        document.querySelector('.grid-cols-4') ||
+        document.querySelector('main section:first-child') ||
+        document.querySelector('section');
+      
+      if (productsSection) {
+        const sectionTop = productsSection.getBoundingClientRect().top;
+        const sectionBottom = productsSection.getBoundingClientRect().bottom;
+        const viewportHeight = window.innerHeight;
+        
+        // Consider past the section if we've scrolled past the top of the section
+        // or if we're in the middle of the section
+        setIsPastProductsSection(sectionTop <= 100 && sectionBottom > 0);
+      } else {
+        // Fallback to scroll position if no products section found
+        setIsPastProductsSection(window.scrollY > 300);
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -172,38 +198,61 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Dynamic text color based on scroll state
+  // Dynamic text color based on scroll state and products section
   const getTextColor = () => {
+    if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getLogoColor = () => {
+    if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getButtonHoverColor = () => {
+    if (isPastProductsSection) return 'hover:bg-gray-100';
     if (isScrolled) return 'hover:bg-white/20';
     return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
+    if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
+  const getSearchBgColor = () => {
+    if (isPastProductsSection) return 'bg-gray-100';
+    if (isScrolled) return 'bg-white/20';
+    return 'bg-white/20';
+  };
+
+  const getSearchTextColor = () => {
+    if (isPastProductsSection) return 'text-gray-900';
+    if (isScrolled) return 'text-white';
+    return 'text-white';
+  };
+
+  const getSearchPlaceholderColor = () => {
+    if (isPastProductsSection) return 'placeholder-gray-500';
+    if (isScrolled) return 'placeholder-white/70';
+    return 'placeholder-white/70';
+  };
+
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = 'hover:text-white/80';
+  const hoverColor = isPastProductsSection ? 'hover:text-gray-600' : 'hover:text-white/80';
   const buttonBgHover = getButtonHoverColor();
-  const searchBgColor = isScrolled ? 'bg-white/20' : 'bg-white/20';
-  const searchTextColor = 'text-white';
-  const searchPlaceholderColor = 'placeholder-white/70';
+  const searchBgColor = getSearchBgColor();
+  const searchTextColor = getSearchTextColor();
+  const searchPlaceholderColor = getSearchPlaceholderColor();
   const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
+    if (isPastProductsSection) return 'text-gray-900';
     return 'text-white';
   };
 
