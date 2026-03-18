@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ShoppingBag, Search, Menu, X, User, Heart, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 interface UserType {
@@ -48,6 +48,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navbarRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if current route is admin dashboard
+  const isAdminDashboard = location.pathname.includes('/admin');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,34 +69,18 @@ export const Navbar: React.FC<NavbarProps> = ({
         document.querySelector('main section:first-child') ||
         document.querySelector('section');
       
-      // Check if we've reached the Admin Dashboard title
-      const adminTitle = 
-        Array.from(document.querySelectorAll('h1')).find(el => 
-          el.textContent?.includes('Admin Dashboard')
-        ) ||
-        document.querySelector('[data-testid="admin-title"]') ||
-        document.querySelector('.admin-dashboard-title');
-      
-      let isPastProducts = false;
-      let isPastAdmin = false;
-      
       if (productsSection) {
         const sectionTop = productsSection.getBoundingClientRect().top;
         const sectionBottom = productsSection.getBoundingClientRect().bottom;
+        const viewportHeight = window.innerHeight;
         
         // Consider past the section if we've scrolled past the top of the section
         // or if we're in the middle of the section
-        isPastProducts = sectionTop <= 100 && sectionBottom > 0;
+        setIsPastProductsSection(sectionTop <= 100 && sectionBottom > 0);
+      } else {
+        // Fallback to scroll position if no products section found
+        setIsPastProductsSection(window.scrollY > 300);
       }
-      
-      if (adminTitle) {
-        const titleTop = adminTitle.getBoundingClientRect().top;
-        // Consider reached if the title is at or near the top of the viewport
-        isPastAdmin = titleTop <= 100;
-      }
-      
-      // Set to true if EITHER condition is met
-      setIsPastProductsSection(isPastProducts || isPastAdmin || window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -214,44 +202,51 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Dynamic text color based on scroll state and products section
+  // Dynamic text color based on route and scroll state
   const getTextColor = () => {
+    if (isAdminDashboard) return 'text-gray-900';
     if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getLogoColor = () => {
+    if (isAdminDashboard) return 'text-gray-900';
     if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getButtonHoverColor = () => {
+    if (isAdminDashboard) return 'hover:bg-gray-100';
     if (isPastProductsSection) return 'hover:bg-gray-100';
     if (isScrolled) return 'hover:bg-white/20';
     return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
+    if (isAdminDashboard) return 'text-gray-900';
     if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getSearchBgColor = () => {
+    if (isAdminDashboard) return 'bg-gray-100';
     if (isPastProductsSection) return 'bg-gray-100';
     if (isScrolled) return 'bg-white/20';
     return 'bg-white/20';
   };
 
   const getSearchTextColor = () => {
+    if (isAdminDashboard) return 'text-gray-900';
     if (isPastProductsSection) return 'text-gray-900';
     if (isScrolled) return 'text-white';
     return 'text-white';
   };
 
   const getSearchPlaceholderColor = () => {
+    if (isAdminDashboard) return 'placeholder-gray-500';
     if (isPastProductsSection) return 'placeholder-gray-500';
     if (isScrolled) return 'placeholder-white/70';
     return 'placeholder-white/70';
@@ -259,7 +254,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = isPastProductsSection ? 'hover:text-gray-600' : 'hover:text-white/80';
+  const hoverColor = (isAdminDashboard || isPastProductsSection) ? 'hover:text-gray-600' : 'hover:text-white/80';
   const buttonBgHover = getButtonHoverColor();
   const searchBgColor = getSearchBgColor();
   const searchTextColor = getSearchTextColor();
@@ -268,6 +263,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getToggleButtonColor = () => {
     if (isMobileMenuOpen) return 'text-gray-900';
+    if (isAdminDashboard) return 'text-gray-900';
     if (isPastProductsSection) return 'text-gray-900';
     return 'text-white';
   };
@@ -278,9 +274,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       className={cn(
         'fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-4 sm:px-6',
         'h-16 sm:h-20 flex items-center',
-        isScrolled
+        isScrolled && !isAdminDashboard
           ? 'glass bg-black/80 backdrop-blur-md shadow-md'
-          : 'bg-transparent',
+          : isAdminDashboard ? 'bg-white shadow-md' : 'bg-transparent',
         'overflow-visible shrink-0'
       )}
     >
