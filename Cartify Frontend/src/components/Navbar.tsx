@@ -65,18 +65,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         document.querySelector('main section:first-child') ||
         document.querySelector('section');
       
+      // Check if we've reached the Admin Dashboard title
+      const adminTitle = 
+        Array.from(document.querySelectorAll('h1')).find(el => 
+          el.textContent?.includes('Admin Dashboard')
+        ) ||
+        document.querySelector('[data-testid="admin-title"]') ||
+        document.querySelector('.admin-dashboard-title');
+      
+      let isPastProducts = false;
+      let isPastAdmin = false;
+      
       if (productsSection) {
         const sectionTop = productsSection.getBoundingClientRect().top;
         const sectionBottom = productsSection.getBoundingClientRect().bottom;
-        const viewportHeight = window.innerHeight;
         
         // Consider past the section if we've scrolled past the top of the section
         // or if we're in the middle of the section
-        setIsPastProductsSection(sectionTop <= 100 && sectionBottom > 0);
-      } else {
-        // Fallback to scroll position if no products section found
-        setIsPastProductsSection(window.scrollY > 300);
+        isPastProducts = sectionTop <= 100 && sectionBottom > 0;
       }
+      
+      if (adminTitle) {
+        const titleTop = adminTitle.getBoundingClientRect().top;
+        // Consider reached if the title is at or near the top of the viewport
+        isPastAdmin = titleTop <= 100;
+      }
+      
+      // Set to true if EITHER condition is met
+      setIsPastProductsSection(isPastProducts || isPastAdmin || window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);
