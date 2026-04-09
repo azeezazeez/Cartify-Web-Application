@@ -117,7 +117,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     return (
                       <div
                         key={productId}
-                        className={`flex space-x-4 border-b border-brand-100 pb-4 transition-opacity ${isUpdating ? 'opacity-50' : ''
+                        className={`flex space-x-4 border-b border-brand-100 pb-4 transition-opacity ₹ {isUpdating ? 'opacity-50' : ''
                           }`}
                       >
                         <div className="w-20 h-20 bg-brand-100 rounded-lg overflow-hidden">
