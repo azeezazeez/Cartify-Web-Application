@@ -122,7 +122,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   return (
     <div className="container mx-auto px-4 py-8">
        {/* 🔥 TITLE */}
-    <div className="flex justify-end mb-6">  
+    <div className="flex justify-start mb-6">  
       <h2 className="text-2xl md:text-3xl font-bold italic text-black dark:text-white">
         Our Products
       </h2>
