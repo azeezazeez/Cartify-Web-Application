@@ -1,6 +1,6 @@
 import { Product, CartItem } from '../types';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://eduexam-online-examination-system.onrender.com/api';
 
 export interface AdminOrder {
   orderId: string;
