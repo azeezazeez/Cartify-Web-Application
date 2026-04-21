@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IndianRupee } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 import {
     Package,
     Users,
