@@ -35,6 +35,8 @@ public class JwtFilter extends OncePerRequestFilter {
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/forgot-password",
+            "/api/auth/forgot-password/generate-otp",  
+            "/api/auth/forgot-password/verify-otp",  
             "/api/products",
             "/api/public",
             "/api/debug",
