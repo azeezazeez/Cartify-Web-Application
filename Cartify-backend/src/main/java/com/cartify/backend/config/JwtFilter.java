@@ -30,18 +30,16 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    // List of public paths that don't require authentication
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
             "/api/auth/login",
             "/api/auth/register",
             "/api/auth/forgot-password",
-            "/api/auth/forgot-password/generate-otp",
-            "/api/auth/forgot-password/verify-otp",
-            "/api/auth/forgot-password/reset-password",
             "/api/products",
             "/api/public",
             "/api/debug",
-            "/h2-console"
+            "/h2-console",
+            "/error",
+            "/favicon.ico"
     );
 
     private boolean isPublicPath(String path) {
@@ -65,24 +63,13 @@ public class JwtFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userEmail;
-
-        // Get the request path - using RequestURI which includes the full path
         String requestURI = request.getRequestURI();
-        String servletPath = request.getServletPath();
         
-        // Enhanced debug logging
         System.out.println("=== JWT FILTER DEBUG ===");
-        System.out.println("RequestURI: '" + requestURI + "'");
-        System.out.println("ServletPath: '" + servletPath + "'");
-        System.out.println("ContextPath: '" + request.getContextPath() + "'");
+        System.out.println("RequestURI: " + requestURI);
         System.out.println("Method: " + request.getMethod());
-        System.out.println("Auth Header present: " + (authHeader != null));
 
-        // PUBLIC ENDPOINTS - Skip JWT validation completely
-        // Check against both RequestURI and ServletPath
-        if (isPublicPath(requestURI) || isPublicPath(servletPath)) {
+        if (isPublicPath(requestURI)) {
             System.out.println("✅ Public path - skipping authentication");
             filterChain.doFilter(request, response);
             return;
@@ -90,17 +77,16 @@ public class JwtFilter extends OncePerRequestFilter {
 
         System.out.println("🔒 Protected path - authentication required");
         
-        // For all other endpoints, require valid JWT token
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("❌ No valid auth header for path: " + requestURI);
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            System.out.println("❌ No valid auth header");
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Missing or invalid Authorization header\"}");
+            response.getWriter().write("{\"error\":\"Authentication required\"}");
             return;
         }
 
-        jwt = authHeader.substring(7);
-        System.out.println("Token received: " + jwt.substring(0, Math.min(50, jwt.length())) + "...");
+        String jwt = authHeader.substring(7);
+        String userEmail;
 
         try {
             userEmail = jwtUtil.extractEmail(jwt);
@@ -108,7 +94,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-                System.out.println("UserDetails authorities: " + userDetails.getAuthorities());
 
                 if (jwtUtil.validateToken(jwt, userEmail)) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -118,34 +103,23 @@ public class JwtFilter extends OncePerRequestFilter {
                     );
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-
                     System.out.println("✅ Authenticated user: " + userEmail);
                 } else {
                     System.out.println("❌ Token validation failed");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
                     response.getWriter().write("{\"error\":\"Invalid token\"}");
                     return;
                 }
             }
         } catch (ExpiredJwtException e) {
-            System.out.println("❌ Token expired for: " + e.getClaims().getSubject());
+            System.out.println("❌ Token expired");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
             response.getWriter().write("{\"error\":\"Token expired\"}");
-            return;
-        } catch (MalformedJwtException | SignatureException e) {
-            System.out.println("❌ Invalid token: " + e.getMessage());
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Invalid token\"}");
             return;
         } catch (Exception e) {
             System.out.println("❌ Auth error: " + e.getMessage());
-            e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Authentication failed: " + e.getMessage() + "\"}");
+            response.getWriter().write("{\"error\":\"Authentication failed\"}");
             return;
         }
 
