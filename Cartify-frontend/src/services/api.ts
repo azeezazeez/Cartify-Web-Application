@@ -1,6 +1,6 @@
 import { Product, CartItem } from '../types';
 
-const BASE_URL = 'https://cartify-web-application.onrender.com';
+const BASE_URL = 'https://cartify-web-application.onrender.com/api';
 
 export interface AdminOrder {
   orderId: string;
