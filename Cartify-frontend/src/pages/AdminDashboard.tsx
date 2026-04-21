@@ -310,8 +310,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                         </p>
                                     </div>
                                     <div className="p-3 bg-green-100 dark:bg-green-900 rounded-lg">
-                                        <IndianRupee className="w-6 h-6 text-green-600 dark:text-green-300" />
-                                    </div>
+                                  <DollarSign className="w-6 h-6 text-green-600 dark:text-green-300" />
+                                </div>
                                 </div>
                             </div>
 
