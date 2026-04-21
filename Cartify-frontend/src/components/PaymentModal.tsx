@@ -303,7 +303,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const cardTypes = [
     { id: 'visa', name: 'Visa', logo: 'https://img.icons8.com/?size=100&id=13608&format=png&color=000000' },
-    { id: 'mastercard', name: 'Mastercard', logo: 'https://www.freepnglogos.com/images/mastercard-26161.html' },
     { id: 'rupay', name: 'RuPay', logo: 'https://img.icons8.com/?size=100&id=5JTcb83oDGrE&format=png&color=000000' },
     { id: 'amex', name: 'American Express', logo: 'https://img.icons8.com/?size=100&id=So6jK8i6jddZ&format=png&color=000000' },
   ];
