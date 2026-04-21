@@ -302,20 +302,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const cardTypes = [
-    { id: 'visa', name: 'Visa', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/visa.png' },
-    { id: 'mastercard', name: 'Mastercard', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/mastercard.png' },
-    { id: 'rupay', name: 'RuPay', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/rupay.png' },
-    { id: 'amex', name: 'American Express', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/amex.png' },
-    { id: 'discover', name: 'Discover', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/discover.png' },
+    { id: 'visa', name: 'Visa', logo: 'https://img.icons8.com/?size=100&id=13608&format=png&color=000000' },
+    { id: 'mastercard', name: 'Mastercard', logo: 'https://www.freepnglogos.com/images/mastercard-26161.html' },
+    { id: 'rupay', name: 'RuPay', logo: 'https://img.icons8.com/?size=100&id=5JTcb83oDGrE&format=png&color=000000' },
+    { id: 'amex', name: 'American Express', logo: 'https://img.icons8.com/?size=100&id=So6jK8i6jddZ&format=png&color=000000' },
   ];
 
   const upiApps = [
-    { id: 'gpay', name: 'Google Pay', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/gpay.png' },
-    { id: 'phonepe', name: 'PhonePe', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/phonepe.png' },
-    { id: 'paytm', name: 'Paytm', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/paytm.png' },
-    { id: 'amazonpay', name: 'Amazon Pay', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/amazonpay.png' },
-    { id: 'whatsapp', name: 'WhatsApp Pay', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/whatsapp.png' },
-    { id: 'bhim', name: 'BHIM UPI', logo: 'https://cdn.jsdelivr.net/gh/neel1995/logos/bhim.png' },
+    { id: 'gpay', name: 'Google Pay', logo: 'https://img.icons8.com/?size=100&id=am4ltuIYDpQ5&format=png&color=000000' },
+    { id: 'phonepe', name: 'PhonePe', logo: 'https://img.icons8.com/?size=100&id=OYtBxIlJwMGA&format=png&color=000000' },
+    { id: 'paytm', name: 'Paytm', logo: 'https://img.icons8.com/?size=100&id=68067&format=png&color=000000' },
+    { id: 'amazonpay', name: 'Amazon Pay', logo: 'https://img.icons8.com/?size=100&id=2nt5XhjL7jBK&format=png&color=000000' },
+    { id: 'whatsapp', name: 'WhatsApp Pay', logo: 'https://img.icons8.com/?size=100&id=16713&format=png&color=000000' },
+    { id: 'bhim', name: 'BHIM UPI', logo: 'https://img.icons8.com/?size=100&id=5RcHTSNy4fbL&format=png&color=000000' },
   ];
 
   if (!isOpen) return null;
