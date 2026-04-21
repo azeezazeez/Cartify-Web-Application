@@ -122,52 +122,53 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   return (
     <div className="container mx-auto px-4 py-8">
        {/* 🔥 TITLE */}
-    <div className="flex justify-start mb-4">  
-      <h2 className="text-2xl md:text-3xl font-bold italic text-black dark:text-white">
-        Our Products
-      </h2>
-    </div>
-      {/* Sort Bar */}
-      <div className="flex justify-end mb-6">
-        <div className="relative">
-          <button
-            onClick={() => setIsSortOpen(!isSortOpen)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-800 transition-colors"
-          >
-            <Filter className="w-4 h-4" />
-            <span>Sort by: {sortBy}</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
-          </button>
+  <div className="flex items-center justify-between mb-6">
 
-          <AnimatePresence>
-            {isSortOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute right-0 mt-2 w-48 bg-white dark:bg-brand-900 rounded-lg shadow-lg border border-gray-200 dark:border-brand-700 z-10"
-              >
-                {sortOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => {
-                      onSortChange(option);
-                      setIsSortOpen(false);
-                    }}
-                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-brand-800 transition-colors ${
-                      sortBy === option
-                        ? 'text-brand-600 dark:text-brand-400 font-medium'
-                        : 'text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+  {/* LEFT: Title */}
+  <h2 className="text-2xl md:text-3xl font-bold italic text-black dark:text-white font-serif">
+    Our Products
+  </h2>
+
+  {/* RIGHT: Sort */}
+  <div className="relative flex items-center">
+    <button
+      onClick={() => setIsSortOpen(!isSortOpen)}
+      className="flex items-center space-x-2 px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-brand-800 transition-colors"
+    >
+      <Filter className="w-4 h-4" />
+      <span>Sort by: {sortBy}</span>
+      <ChevronDown className={`w-4 h-4 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+    </button>
+
+    <AnimatePresence>
+      {isSortOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="absolute right-0 mt-2 w-48 bg-white dark:bg-brand-900 rounded-lg shadow-lg border border-gray-200 dark:border-brand-700 z-10"
+        >
+          {sortOptions.map((option) => (
+            <button
+              key={option}
+              onClick={() => {
+                onSortChange(option);
+                setIsSortOpen(false);
+              }}
+              className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-brand-800 ${
+                sortBy === option
+                  ? 'text-brand-600 dark:text-brand-400 font-medium'
+                  : 'text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+</div>
 
       {/* Product Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
