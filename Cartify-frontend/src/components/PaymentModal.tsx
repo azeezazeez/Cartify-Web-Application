@@ -31,7 +31,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Get API URL from environment or use default
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://cartify-web-application.onrender.com/api';
 
   // Luhn Algorithm for card validation
   const isValidCardNumber = (num: string) => {
