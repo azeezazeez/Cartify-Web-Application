@@ -137,7 +137,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium dark:text-white truncate">{productName}</h4>
                       <p className="text-brand-600 dark:text-brand-400 text-sm mt-1">
-                        ₹{productPrice.toFixed(2)}
+                        ${productPrice.toFixed(2)}
                       </p>
                       <div className="flex items-center space-x-2 mt-2">
                         <button
@@ -171,7 +171,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       </div>
                     </div>
                     <div className="font-bold dark:text-white whitespace-nowrap">
-                      ₹{(productPrice * quantity).toFixed(2)}
+                      ${(productPrice * quantity).toFixed(2)}
                     </div>
                   </div>
                 );
@@ -185,7 +185,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="p-6 border-t border-brand-100 dark:border-brand-800">
             <div className="flex justify-between mb-4 dark:text-white">
               <span>Subtotal</span>
-              <span className="font-bold">₹{subtotal.toFixed(2)}</span>
+              <span className="font-bold">${subtotal.toFixed(2)}</span>
             </div>
             <button
               onClick={onCheckout}
