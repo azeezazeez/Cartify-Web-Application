@@ -1,6 +1,6 @@
 import { Product, CartItem } from '../types';
 
-const BASE_URL = 'https://eduexam-online-examination-system.onrender.com/api';
+const BASE_URL = 'https://cartify-web-application.onrender.com/api';
 
 export interface AdminOrder {
   orderId: string;
