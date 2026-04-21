@@ -67,14 +67,7 @@ export const ProductModal: React.FC<ProductModalProps> = ({
             </div>
 
            <div className="flex-1 relative overflow-y-auto no-scrollbar">
-
-  {/* Title aligned to LEFT edge */}
-  <p className="absolute top-6 left-6 text-black dark:text-white font-bold text-sm z-[200]">
-    Our Products
-  </p>
-
-  {/* Proper content wrapper */}
-  <div className="p-8 md:p-12 space-y-6 pt-12">
+          <div className="p-8 md:p-12 space-y-6 pt-12">
 
     <div>
       <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-[0.2em] mb-2">
