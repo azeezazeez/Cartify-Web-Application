@@ -22,6 +22,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin("*")
 public class AuthController {
 
     @Autowired
@@ -114,9 +115,6 @@ public class AuthController {
 
     @PostMapping("/auth/forgot-password/generate-otp")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        System.out.println("=== GENERATE OTP ENDPOINT HIT ===");
-        System.out.println("Email: " + request.getEmail());
-        
         boolean result = forgotPasswordService.generateAndSendOtp(request.getEmail());
 
         if (!result) {
@@ -127,27 +125,8 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse(true, "OTP Sent Successfully", ""));
     }
 
-    @PostMapping("/auth/forgot-password/verify-otp")
-    public ResponseEntity<?> verifyOtp(@RequestBody VerifyOtpRequest request) {
-        System.out.println("=== VERIFY OTP ENDPOINT HIT ===");
-        System.out.println("Email: " + request.getEmail());
-        System.out.println("OTP: " + request.getOtp());
-        
-        boolean isValid = forgotPasswordService.verifyOtp(request.getEmail(), request.getOtp());
-
-        if (!isValid) {
-            return ResponseEntity.status(400).body(
-                    new ApiResponse(false, "Invalid or expired OTP", ""));
-        }
-
-        return ResponseEntity.ok(new ApiResponse(true, "OTP verified successfully", ""));
-    }
-
     @PostMapping("/auth/forgot-password/reset")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        System.out.println("=== RESET PASSWORD ENDPOINT HIT ===");
-        System.out.println("Email: " + request.getEmail());
-        
         boolean result = forgotPasswordService.resetPassword(
                 request.getEmail(),
                 request.getOtp(),
@@ -163,7 +142,7 @@ public class AuthController {
     }
 
     @PatchMapping("/user/profile")
-    public ResponseEntity<?> updateProfile(@RequestParam String userId, @RequestBody UpdateProfile request) {
+    public ResponseEntity<?> updateProfile(String userId, UpdateProfile request) {
         Long id = Long.parseLong(userId);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
@@ -187,6 +166,7 @@ public class AuthController {
         return ResponseEntity.ok(userRepository.save(user));
     }
 
+    // Get current user profile - FIXED
     @GetMapping("/auth/profile")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUserProfile() {
         try {
@@ -225,6 +205,7 @@ public class AuthController {
         }
     }
 
+    // Update current user profile - FIXED
     @PutMapping("/auth/profile")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateCurrentUserProfile(
             @RequestBody Map<String, Object> request) {
@@ -242,6 +223,7 @@ public class AuthController {
 
             User user = userOpt.get();
 
+            // Update only provided fields
             if (request.containsKey("username")) user.setUsername((String) request.get("username"));
             if (request.containsKey("phoneNumber")) user.setPhone((String) request.get("phoneNumber"));
             if (request.containsKey("address")) user.setAddress((String) request.get("address"));
@@ -275,6 +257,7 @@ public class AuthController {
         }
     }
 
+    // Change current user password - FIXED
     @PutMapping("/auth/profile/change-password")
     public ResponseEntity<ApiResponse<Void>> changeCurrentUserPassword(
             @RequestBody Map<String, String> request) {
@@ -293,11 +276,13 @@ public class AuthController {
 
             User user = userOpt.get();
 
+            // Verify current password
             if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(ApiResponse.error("Current password is incorrect"));
             }
 
+            // Update to new password
             user.setPassword(passwordEncoder.encode(newPassword));
             user.setUpdatedAt(LocalDateTime.now());
             userRepository.save(user);
@@ -310,7 +295,6 @@ public class AuthController {
         }
     }
 
-    @DeleteMapping("/auth/user")
     public void deleteUser(@RequestBody LoginRequest request) {
         userRepository.deleteById(userRepository.findByEmail(request.getEmail()).orElseThrow().getId());
     }
