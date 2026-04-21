@@ -66,13 +66,12 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               />
             </div>
 
-            <div className="flex-1 p-8 md:p-12 overflow-y-auto no-scrollbar">
-              <div className="space-y-6">
-             <div className="mb-4">
-            <p className="text-black dark:text-white font-bold text-sm">
-            Our Products
-                </p>
-                </div>
+            <div className="flex-1 relative overflow-y-auto no-scrollbar">
+                    <p className="absolute top-4 left-4 text-black dark:text-white font-bold text-sm z-[200]">
+                        Our Products
+                        </p>
+                    <div className="p-8 md:p-12 space-y-6">
+                    </div>
                    <div>
                   <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-[0.2em] mb-2">
                     {product.category}
