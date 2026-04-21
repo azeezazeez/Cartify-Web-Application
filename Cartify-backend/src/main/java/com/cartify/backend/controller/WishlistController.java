@@ -20,7 +20,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/wishlist")
-@CrossOrigin("*")
 @Transactional
 public class WishlistController {
 
