@@ -68,7 +68,6 @@ export const ProductModal: React.FC<ProductModalProps> = ({
 
             <div className="flex-1 p-8 md:p-12 overflow-y-auto no-scrollbar">
               <div className="space-y-6">
-                <div className="mb-4">
                 <div className="mb-4 -ml-8 md:-ml-12">
                   <p className="text-black font-bold text-sm">
                   Our Products
