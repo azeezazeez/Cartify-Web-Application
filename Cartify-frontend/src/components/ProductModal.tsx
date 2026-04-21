@@ -66,83 +66,107 @@ export const ProductModal: React.FC<ProductModalProps> = ({
               />
             </div>
 
-            <div className="flex-1 relative overflow-y-auto no-scrollbar">
-                    <p className="absolute top-4 left-4 text-black dark:text-white font-bold text-sm z-[200]">
-                        Our Products
-                        </p>
-                    <div className="p-8 md:p-12 space-y-6">
-                    </div>
-                   <div>
-                  <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-[0.2em] mb-2">
-                    {product.category}
-                  </p>
-                  <h2 className="text-3xl font-serif font-bold mb-2 dark:text-white">{product.name}</h2>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={cn(
-                            "w-4 h-4",
-                            i < Math.floor(product.rating || 0)
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-gray-300 dark:text-gray-600"
-                          )}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-medium text-brand-500 dark:text-brand-400">
-                      {product.rating} ({product.reviews} reviews)
-                    </span>
-                  </div>
-                </div>
+           <div className="flex-1 relative overflow-y-auto no-scrollbar">
 
-                <p className="text-4xl font-bold text-brand-950 dark:text-white">${product.price.toFixed(2)}</p>
+  {/* Title aligned to LEFT edge */}
+  <p className="absolute top-6 left-6 text-black dark:text-white font-bold text-sm z-[200]">
+    Our Products
+  </p>
 
-                <p className="text-brand-600 dark:text-brand-300 leading-relaxed">{product.description}</p>
+  {/* Proper content wrapper */}
+  <div className="p-8 md:p-12 space-y-6 pt-12">
 
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={handleAddToCart}
-                      className="flex-1 py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-3 hover:bg-brand-800 dark:hover:bg-brand-100 transition-all shadow-lg"
-                    >
-                      <ShoppingBag className="w-5 h-5" />
-                      <span>Add to Cart</span>
-                    </button>
-                    <button
-                      onClick={handleToggleWishlist}
-                      className={cn(
-                        "p-4 border rounded-xl transition-all duration-300",
-                        isWishlisted
-                          ? "bg-brand-950 dark:bg-white text-white dark:text-brand-950 border-brand-950 dark:border-white"
-                          : "border-brand-200 dark:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-800 dark:text-white"
-                      )}
-                    >
-                      <Heart className={cn("w-5 h-5", isWishlisted && "fill-current")} />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => showToast('Sharing is coming soon!')}
-                    className="w-full py-3 text-sm font-bold text-brand-500 dark:text-brand-400 flex items-center justify-center space-x-2 hover:text-brand-950 dark:hover:text-white transition-colors"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>Share this product</span>
-                  </button>
-                </div>
+    <div>
+      <p className="text-xs font-bold text-brand-500 dark:text-brand-400 uppercase tracking-[0.2em] mb-2">
+        {product.category}
+      </p>
 
-                <div className="pt-8 border-t border-brand-100 dark:border-brand-800 grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-brand-400 dark:text-brand-500 uppercase tracking-widest">Shipping</p>
-                    <p className="text-sm font-medium dark:text-white">Free worldwide shipping</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-brand-400 dark:text-brand-500 uppercase tracking-widest">Returns</p>
-                    <p className="text-sm font-medium dark:text-white">30-day easy returns</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <h2 className="text-3xl font-serif font-bold mb-2 dark:text-white">
+        {product.name}
+      </h2>
+
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center">
+          {[...Array(5)].map((_, i) => (
+            <Star
+              key={i}
+              className={cn(
+                "w-4 h-4",
+                i < Math.floor(product.rating || 0)
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-gray-300 dark:text-gray-600"
+              )}
+            />
+          ))}
+        </div>
+
+        <span className="text-sm font-medium text-brand-500 dark:text-brand-400">
+          {product.rating} ({product.reviews} reviews)
+        </span>
+      </div>
+    </div>
+
+    <p className="text-4xl font-bold text-brand-950 dark:text-white">
+      ${product.price.toFixed(2)}
+    </p>
+
+    <p className="text-brand-600 dark:text-brand-300 leading-relaxed">
+      {product.description}
+    </p>
+
+    <div className="space-y-4 pt-4">
+      <div className="flex items-center space-x-4">
+        <button
+          onClick={handleAddToCart}
+          className="flex-1 py-4 bg-brand-950 dark:bg-white dark:text-brand-950 text-white rounded-xl font-bold flex items-center justify-center space-x-3 hover:bg-brand-800 dark:hover:bg-brand-100 transition-all shadow-lg"
+        >
+          <ShoppingBag className="w-5 h-5" />
+          <span>Add to Cart</span>
+        </button>
+
+        <button
+          onClick={handleToggleWishlist}
+          className={cn(
+            "p-4 border rounded-xl transition-all duration-300",
+            isWishlisted
+              ? "bg-brand-950 dark:bg-white text-white dark:text-brand-950 border-brand-950 dark:border-white"
+              : "border-brand-200 dark:border-brand-700 hover:bg-brand-50 dark:hover:bg-brand-800 dark:text-white"
+          )}
+        >
+          <Heart className={cn("w-5 h-5", isWishlisted && "fill-current")} />
+        </button>
+      </div>
+
+      <button
+        onClick={() => showToast('Sharing is coming soon!')}
+        className="w-full py-3 text-sm font-bold text-brand-500 dark:text-brand-400 flex items-center justify-center space-x-2 hover:text-brand-950 dark:hover:text-white transition-colors"
+      >
+        <Share2 className="w-4 h-4" />
+        <span>Share this product</span>
+      </button>
+    </div>
+
+    <div className="pt-8 border-t border-brand-100 dark:border-brand-800 grid grid-cols-2 gap-4">
+      <div className="space-y-1">
+        <p className="text-[10px] font-bold text-brand-400 dark:text-brand-500 uppercase tracking-widest">
+          Shipping
+        </p>
+        <p className="text-sm font-medium dark:text-white">
+          Free worldwide shipping
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        <p className="text-[10px] font-bold text-brand-400 dark:text-brand-500 uppercase tracking-widest">
+          Returns
+        </p>
+        <p className="text-sm font-medium dark:text-white">
+          30-day easy returns
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
           </motion.div>
         </>
       )}
