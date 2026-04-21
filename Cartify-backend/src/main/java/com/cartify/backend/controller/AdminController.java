@@ -15,7 +15,6 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin("*")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
