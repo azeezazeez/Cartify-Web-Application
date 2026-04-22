@@ -6,8 +6,9 @@ Cartify is a full-stack e-commerce web application built using **React (Frontend
 
 ## 🚀 Live Links
 
-🌐 Live Demo: https://cartify-cart.vercel.app 
-
+🌐 Live Demo: https://cartify-cart.vercel.app  
+   (Note: Initial load may take a few seconds)
+ 
 💻 GitHub: https://github.com/azeezazeez/Cartify-Web-Application
 
 ---
