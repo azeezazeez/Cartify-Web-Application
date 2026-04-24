@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/auth")
 @CrossOrigin("*")
 public class AuthController {
 
@@ -37,7 +37,7 @@ public class AuthController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    @PostMapping("/auth/register")
+    @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(@RequestBody Map<String, String> request) {
 
         String email = request.get("email");
@@ -82,7 +82,7 @@ public class AuthController {
                 .body(ApiResponse.success("Registration successful", responseData));
     }
 
-    @PostMapping("/auth/login")
+    @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody Map<String, String> request) {
         String email = request.get("email");
         String password = request.get("password");
@@ -113,7 +113,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", responseData));
     }
 
-    @PostMapping("/auth/forgot-password/generate-otp")
+    @PostMapping("/forgot-password/generate-otp")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         boolean result = forgotPasswordService.generateAndSendOtp(request.getEmail());
 
@@ -125,7 +125,7 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse(true, "OTP Sent Successfully", ""));
     }
 
-    @PostMapping("/auth/forgot-password/reset")
+    @PostMapping("/forgot-password/reset")
     public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
         boolean result = forgotPasswordService.resetPassword(
                 request.getEmail(),
@@ -167,7 +167,7 @@ public class AuthController {
     }
 
     // Get current user profile - FIXED
-    @GetMapping("/auth/profile")
+    @GetMapping("/profile")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUserProfile() {
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -206,7 +206,7 @@ public class AuthController {
     }
 
     // Update current user profile - FIXED
-    @PutMapping("/auth/profile")
+    @PutMapping("/profile")
     public ResponseEntity<ApiResponse<Map<String, Object>>> updateCurrentUserProfile(
             @RequestBody Map<String, Object> request) {
         try {
@@ -258,7 +258,7 @@ public class AuthController {
     }
 
     // Change current user password - FIXED
-    @PutMapping("/auth/profile/change-password")
+    @PutMapping("/profile/change-password")
     public ResponseEntity<ApiResponse<Void>> changeCurrentUserPassword(
             @RequestBody Map<String, String> request) {
         try {
