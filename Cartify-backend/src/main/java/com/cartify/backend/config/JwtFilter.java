@@ -60,6 +60,10 @@ public class JwtFilter extends OncePerRequestFilter {
         final String jwt;
         final String userEmail;
 
+        if (request.getMethod().equals("OPTIONS")) {
+        filterChain.doFilter(request, response);
+        return;
+    }
         // Get the request path
         String path = request.getServletPath();
         System.out.println("=== JWT FILTER DEBUG ===");
