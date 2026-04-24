@@ -18,8 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -30,21 +28,21 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    private static final List<String> PUBLIC_PATHS = Arrays.asList(
-    "/api/auth",         
-    "/api/products",
-    "/api/public",
-    "/api/debug",
-    "/h2-console"
-      );
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        String method = request.getMethod();
 
-    private boolean isPublicPath(String path) {
-        for (String publicPath : PUBLIC_PATHS) {
-            if (path.startsWith(publicPath)) {
-                return true;
-            }
-        }
-        return false;
+        // Skip filter for OPTIONS preflight
+        if ("OPTIONS".equalsIgnoreCase(method)) return true;
+
+        // Skip filter for all public paths
+        return path.startsWith("/api/auth/") ||
+               path.equals("/api/auth") ||
+               path.startsWith("/api/products") ||
+               path.startsWith("/api/public") ||
+               path.startsWith("/api/debug") ||
+               path.startsWith("/h2-console");
     }
 
     @Override
@@ -54,24 +52,8 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // ✅ Allow OPTIONS preflight requests through immediately
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            response.setStatus(HttpServletResponse.SC_OK);
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String path = request.getServletPath();
-
-        // ✅ Skip JWT for public paths
-        if (isPublicPath(path)) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
         final String authHeader = request.getHeader("Authorization");
 
-        // ✅ Require Bearer token for all protected paths
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
