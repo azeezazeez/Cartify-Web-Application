@@ -31,14 +31,12 @@ public class JwtFilter extends OncePerRequestFilter {
     private UserDetailsService userDetailsService;
 
     private static final List<String> PUBLIC_PATHS = Arrays.asList(
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/forgot-password",
-            "/api/products",
-            "/api/public",
-            "/api/debug",
-            "/h2-console"
-    );
+    "/api/auth",         
+    "/api/products",
+    "/api/public",
+    "/api/debug",
+    "/h2-console"
+      );
 
     private boolean isPublicPath(String path) {
         for (String publicPath : PUBLIC_PATHS) {
