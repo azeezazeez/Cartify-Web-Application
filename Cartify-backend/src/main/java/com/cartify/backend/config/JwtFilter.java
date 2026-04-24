@@ -30,16 +30,15 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    // List of public paths that don't require authentication
-    private static final List<String> PUBLIC_PATHS = Arrays.asList(
-            "/api/auth/login",
-            "/api/auth/register",
-            "/api/auth/forgot-password",
-            "/api/products",
-            "/api/public",
-            "/api/debug",
-            "/h2-console"
-    );
+   private static final List<String> PUBLIC_PATHS = Arrays.asList(
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/forgot-password",  
+    "/api/products",
+    "/api/public",
+    "/api/debug",
+    "/h2-console"
+);
 
     private boolean isPublicPath(String path) {
         for (String publicPath : PUBLIC_PATHS) {
