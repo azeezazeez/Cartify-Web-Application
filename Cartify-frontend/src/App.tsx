@@ -410,7 +410,7 @@ function App() {
             : <Navigate to="/" replace />
         } />
 
-        <Route path="/my-orders" element={<UserOrdersPage } />} />
+        <Route path="/my-orders" element={<UserOrdersPage />} />
 
         <Route path="/wishlist" element={
           <WishlistPage
