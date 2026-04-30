@@ -138,13 +138,6 @@ function App() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-    localStorage.setItem('cartify_theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
   useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
 
   const handleLogout = () => {
@@ -375,19 +368,17 @@ function App() {
   return (
     <div className="min-h-screen bg-white dark:bg-brand-950 font-sans">
       <Navbar
-        cartCount={memoizedCartCount}
-        wishlistCount={wishlist.length}
-        onCartClick={() => setIsCartOpen(true)}
-        onWishlistClick={() => navigate('/wishlist')}
-        onAuthClick={() => setIsAuthOpen(true)}
-        onLogout={handleLogout}
-        user={user}
-        isDark={isDark}
-        toggleTheme={() => setIsDark(!isDark)}
-        showToast={showToast}
-        onSearch={setSearchQuery}
-        onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
-      />
+  cartCount={memoizedCartCount}
+  wishlistCount={wishlist.length}
+  onCartClick={() => setIsCartOpen(true)}
+  onWishlistClick={() => navigate('/wishlist')}
+  onAuthClick={() => setIsAuthOpen(true)}
+  onLogout={handleLogout}
+  user={user}
+  showToast={showToast}
+  onSearch={setSearchQuery}
+  onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
+        />
 
       <Routes>
         <Route path="/" element={
@@ -419,7 +410,7 @@ function App() {
             : <Navigate to="/" replace />
         } />
 
-        <Route path="/my-orders" element={<UserOrdersPage isDark={isDark} />} />
+        <Route path="/my-orders" element={<UserOrdersPage } />} />
 
         <Route path="/wishlist" element={
           <WishlistPage
