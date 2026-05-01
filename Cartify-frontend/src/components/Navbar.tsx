@@ -198,10 +198,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     return isScrolled ? 'text-gray-900' : 'text-white';
   };
 
-  const getIconColor = () => {
-    return isScrolled ? 'text-gray-900' : 'text-white';
-  };
-
   const getButtonHoverColor = () => {
     return isScrolled ? 'hover:bg-gray-100' : 'hover:bg-white/20';
   };
@@ -230,7 +226,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const iconColor = getIconColor();
   const buttonBgHover = getButtonHoverColor();
   const searchBgColor = getSearchBgColor();
   const searchTextColor = getSearchTextColor();
@@ -238,10 +233,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
-    if (isMobileMenuOpen) return isDark ? 'text-white' : 'text-gray-900';
-    if (useDarkText) return isDark ? 'text-white' : 'text-gray-900';
-    return 'text-white';
-  };
+  return isScrolled ? 'text-gray-900' : 'text-white';
+};
 
   // Function to get user initials from profile settings
   const getUserInitials = () => {
@@ -725,20 +718,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="flex items-center space-x-3">
           
                     </div>
-                    {/* Pill toggle */}
-                    <div className={cn(
-                      "w-11 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0",
-                      isDark ? "bg-brand-600" : "bg-gray-300"
-                    )}>
-                      <motion.div
-                        layout
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                        className={cn(
-                          "absolute top-0.5 w-5 h-5 rounded-full shadow-md",
-                          isDark ? "bg-white right-0.5" : "bg-white left-0.5"
-                        )}
-                      />
-                    </div>
+              
                   </div>
                 </div>
               </div>
