@@ -50,12 +50,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setLoading(true);
         setError(null);
         try {
-            const [ordersData, customersData, statsData] = await Promise.all([
-                api.adminGetAllOrders().catch(() => []),
-                api.adminGetAllCustomers().catch(() => []),
-                api.adminGetOrderStats().catch(() => null)
-            ]);
-            setOrders(ordersData || []);
+           const [ordersData, customersData, statsData] = await Promise.all([
+    api.adminGetAllOrders().catch(() => []),
+    api.adminGetAllCustomers().catch(() => []),
+    api.adminGetOrderStats().catch(() => null)
+]);
+
+const realOrders = (ordersData || []).filter((order: AdminOrder) => {
+    const fakePatterns = [
+        order.orderId?.startsWith('MOCK-'),
+        order.orderId?.startsWith('TEST-'),
+        order.orderId?.startsWith('DEMO-'),
+        order.customerEmail?.toLowerCase().includes('test'),
+        order.customerEmail?.toLowerCase().includes('example'),
+        order.customerName?.toLowerCase().includes('test'),
+        order.totalAmount === 0,
+        order.totalAmount === 99.99,
+    ];
+    return !fakePatterns.some(pattern => pattern === true);
+});
+
+setOrders(realOrders);
             setCustomers(customersData || []);
             setStats(statsData || {
                 totalOrders: 0,
