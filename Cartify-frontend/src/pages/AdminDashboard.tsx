@@ -50,39 +50,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setLoading(true);
         setError(null);
         try {
-           const [ordersData, customersData, statsData] = await Promise.all([
-    api.adminGetAllOrders().catch(() => []),
-    api.adminGetAllCustomers().catch(() => []),
-    api.adminGetOrderStats().catch(() => null)
-]);
-
-const realOrders = (ordersData || []).filter((order: AdminOrder) => {
-    const fakePatterns = [
-        order.orderId?.startsWith('MOCK-'),
-        order.orderId?.startsWith('TEST-'),
-        order.orderId?.startsWith('DEMO-'),
-        order.customerEmail?.toLowerCase().includes('test'),
-        order.customerEmail?.toLowerCase().includes('example'),
-        order.customerName?.toLowerCase().includes('test'),
-        order.totalAmount === 0,
-        order.totalAmount === 99.99,
-    ];
-    return !fakePatterns.some(pattern => pattern === true);
-});
-
-setOrders(realOrders);
-            setCustomers(customersData || []);
-            setStats(statsData || {
-                totalOrders: 0,
-                totalRevenue: 0,
-                pendingOrders: 0,
-                confirmedOrders: 0,
-                processingOrders: 0,
-                shippedOrders: 0,
-                deliveredOrders: 0,
-                cancelledOrders: 0,
-                recentOrders: []
+            const [ordersData, customersData, statsData] = await Promise.all([
+                api.adminGetAllOrders().catch(() => []),
+                api.adminGetAllCustomers().catch(() => []),
+                api.adminGetOrderStats().catch(() => null)
+            ]);
+            
+            // ✅ FILTER OUT FAKE/MOCK ORDERS
+            const realOrders = (ordersData || []).filter((order: AdminOrder) => {
+                const isFake = 
+                    order.orderId?.startsWith('MOCK-') ||
+                    order.orderId?.startsWith('TEST-') ||
+                    order.orderId?.startsWith('DEMO-') ||
+                    order.customerEmail?.toLowerCase().includes('test') ||
+                    order.customerEmail?.toLowerCase().includes('example') ||
+                    order.customerName?.toLowerCase().includes('test') ||
+                    order.totalAmount === 0 ||
+                    order.totalAmount === 99.99;
+                return !isFake;
             });
+            
+            setOrders(realOrders);
+            setCustomers(customersData || []);
+            
+            // ✅ Update stats based on real orders only
+            const updatedStats = {
+                totalOrders: realOrders.length,
+                totalRevenue: realOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+                pendingOrders: realOrders.filter(o => o.status === 'PENDING').length,
+                confirmedOrders: realOrders.filter(o => o.status === 'CONFIRMED').length,
+                processingOrders: realOrders.filter(o => o.status === 'PROCESSING').length,
+                shippedOrders: realOrders.filter(o => o.status === 'SHIPPED').length,
+                deliveredOrders: realOrders.filter(o => o.status === 'DELIVERED').length,
+                cancelledOrders: realOrders.filter(o => o.status === 'CANCELLED').length,
+                recentOrders: realOrders.slice(0, 5)
+            };
+            
+            setStats(statsData ? {
+                ...statsData,
+                totalOrders: realOrders.length,
+                totalRevenue: realOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+                pendingOrders: realOrders.filter(o => o.status === 'PENDING').length,
+                confirmedOrders: realOrders.filter(o => o.status === 'CONFIRMED').length,
+                processingOrders: realOrders.filter(o => o.status === 'PROCESSING').length,
+                shippedOrders: realOrders.filter(o => o.status === 'SHIPPED').length,
+                deliveredOrders: realOrders.filter(o => o.status === 'DELIVERED').length,
+                cancelledOrders: realOrders.filter(o => o.status === 'CANCELLED').length,
+            } : updatedStats);
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
             setError(null);
