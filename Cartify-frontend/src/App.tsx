@@ -56,6 +56,8 @@ function App() {
   const productGridRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   const showToast = useCallback((text: string, type: 'success' | 'info' | 'error' = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, text, type }]);
