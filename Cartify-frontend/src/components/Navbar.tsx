@@ -54,18 +54,16 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isWishlistPage = location.pathname === '/wishlist';
   const isProfilePage = location.pathname === '/profile';
 
- useEffect(() => {
-  const handleScroll = () => {
-    const scrolled = window.scrollY > 120;
-    setIsScrolled(scrolled);
-    setIsPastProductsSection(scrolled); 
-  };
-
-  window.addEventListener('scroll', handleScroll);
-  handleScroll();
-
-  return () => window.removeEventListener('scroll', handleScroll);
-}, []);
+   useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 120;
+      setIsScrolled(scrolled);
+      setIsPastProductsSection(scrolled);
+    };
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -188,29 +186,24 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Check if navbar should use dark text (black color)
   const useDarkText = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage || isPastProductsSection;
 
-  // Check if navbar should have white background
   const useWhiteBg = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage;
 
-  const getTextColor = () => {
-  return isScrolled ? 'text-gray-900' : 'text-white';
-};
+   const getTextColor = () => {
+    return isScrolled ? 'text-gray-900' : 'text-white';
+  };
 
   const getLogoColor = () => {
-    if (isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage) {
-      return isDark ? 'text-white' : 'text-gray-900';
-    }
-    if (isPastProductsSection) {
-      return isDark ? 'text-white' : 'text-gray-900';
-    }
-    return 'text-white';
+    return isScrolled ? 'text-gray-900' : 'text-white';
+  };
+
+  const getIconColor = () => {
+    return isScrolled ? 'text-gray-900' : 'text-white';
   };
 
   const getButtonHoverColor = () => {
-    if (useDarkText) return isDark ? 'hover:bg-brand-800' : 'hover:bg-gray-100';
-    return 'hover:bg-white/20';
+    return isScrolled ? 'hover:bg-gray-100' : 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
@@ -223,26 +216,21 @@ export const Navbar: React.FC<NavbarProps> = ({
     return 'text-white';
   };
 
-  const getSearchBgColor = () => {
-    if (useDarkText) return isDark ? 'bg-brand-800' : 'bg-gray-100';
-    return 'bg-white/20';
+   const getSearchBgColor = () => {
+    return isScrolled ? 'bg-gray-100' : 'bg-white/20';
   };
 
   const getSearchTextColor = () => {
-    if (useDarkText) return isDark ? 'text-white' : 'text-gray-900';
-    return 'text-white';
+    return isScrolled ? 'text-gray-900' : 'text-white';
   };
 
   const getSearchPlaceholderColor = () => {
-    if (useDarkText) return isDark ? 'placeholder-brand-400' : 'placeholder-gray-500';
-    return 'placeholder-white/70';
+    return isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
-  const hoverColor = useDarkText
-    ? (isDark ? 'hover:text-brand-400' : 'hover:text-gray-600')
-    : 'hover:text-white/80';
+  const iconColor = getIconColor();
   const buttonBgHover = getButtonHoverColor();
   const searchBgColor = getSearchBgColor();
   const searchTextColor = getSearchTextColor();
@@ -326,17 +314,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   const mobileUserBg = 'bg-gray-50 dark:bg-brand-800';
   const mobileCloseBtn = 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-brand-800';
 
-  return (
+    return (
     <nav
       ref={navbarRef}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 px-4 sm:px-6',
         'h-16 sm:h-20 flex items-center',
-        isScrolled && !useWhiteBg
-          ? (? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
-          : useWhiteBg
-            ? (? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
-            : 'bg-transparent',
+        isScrolled || isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage
+          ? 'bg-white shadow-md'
+          : 'bg-transparent',
         'overflow-visible shrink-0'
       )}
     >
