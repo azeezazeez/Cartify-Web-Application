@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion'; // ✅ Fixed import
+import { motion } from 'framer-motion';
 
 // Regular imports (non-lazy for critical components)
 import Profile from './pages/Profile';
@@ -18,7 +18,7 @@ import { OrderConfirmationOverlay } from './components/OrderConfirmationOverlay'
 import { api } from './services/api';
 import { Product, CartItem } from './types';
 
-// ✅ Lazy load non-critical pages
+// Lazy load non-critical pages
 const WishlistPage = lazy(() => import('./pages/WishlistPage'));
 const SustainabilityPage = lazy(() => import('./pages/SustainabilityPage'));
 const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
@@ -27,7 +27,7 @@ const UserOrdersPage = lazy(() => import('./pages/UserOrdersPage'));
 
 const CartDrawer = React.memo(OriginalCartDrawer);
 
-// Loading component for Suspense fallback
+// Loading component
 const LoadingSpinner = () => (
   <div className="min-h-screen bg-white dark:bg-brand-950 flex items-center justify-center">
     <motion.div
@@ -58,11 +58,10 @@ function App() {
   const [isLookbookOpen, setIsLookbookOpen] = useState(false);
   const [isOrderConfirmationOpen, setIsOrderConfirmationOpen] = useState(false);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
-  const [isLoaded, setIsLoaded] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Featured');
-  const [isCartSyncing, setIsCartSyncing] = useState(false);
 
   const productGridRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -80,38 +79,8 @@ function App() {
   const memoizedCartTotal = useMemo(() => cart.totalAmount, [cart.totalAmount]);
   const memoizedCartCount = useMemo(() => cart.totalItems, [cart.totalItems]);
 
-  // Sync user from localStorage
-  useEffect(() => {
-    const checkUser = () => {
-      const userStr = localStorage.getItem('cartify_currentUser');
-      if (userStr) {
-        try { setUser(JSON.parse(userStr)); }
-        catch { setUser(null); }
-      } else {
-        setUser(null);
-      }
-    };
-    checkUser();
-    window.addEventListener('storage', checkUser);
-    return () => window.removeEventListener('storage', checkUser);
-  }, []);
-
-  // Admin redirect on initial load
-  useEffect(() => {
-    const userStr = localStorage.getItem('cartify_currentUser');
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-        if (userData.role === 'ADMIN' && location.pathname === '/') {
-          navigate('/admin');
-          showToast('Welcome to Admin Dashboard!', 'success');
-        }
-      } catch { }
-    }
-  }, [location.pathname, navigate, showToast]);
-
-  const transformCartItems = (items: any[]): CartItem[] =>
+  // Transform functions
+  const transformCartItems = useCallback((items: any[]): CartItem[] =>
     items.map((item: any) => ({
       cartItemId: Number(item.cartItemId || 0),
       userId: Number(item.userId || 0),
@@ -125,9 +94,9 @@ function App() {
       name: String(item.productName || item.name || ''),
       price: Number(item.productPrice || item.price || 0),
       image: String(item.productImage || item.image || ''),
-    }));
+    })), []);
 
-  const transformCartResponse = (cartData: any) => {
+  const transformCartResponse = useCallback((cartData: any) => {
     const items = Array.isArray(cartData.items) ? transformCartItems(cartData.items) : [];
     return {
       items,
@@ -138,22 +107,36 @@ function App() {
         ? cartData.totalAmount
         : items.reduce((s, i) => s + i.subtotal, 0),
     };
-  };
+  }, [transformCartItems]);
 
+  // Fetch data from API
   const fetchData = useCallback(async () => {
     try {
+      setIsLoaded(false);
       const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
+      
+      // Fetch products from your actual API
+      console.log('Fetching products from API...');
       const productsResponse = await api.getProducts();
-      setProducts(Array.isArray(productsResponse) ? productsResponse : []);
+      
+      if (Array.isArray(productsResponse) && productsResponse.length > 0) {
+        setProducts(productsResponse);
+        console.log(`✅ Loaded ${productsResponse.length} products from API`);
+      } else {
+        console.warn('⚠️ API returned empty products array');
+        setProducts([]);
+        showToast('No products found in the database', 'info');
+      }
 
       if (isLoggedIn) {
         try {
           const cartResponse = await api.getCart();
           if (cartResponse && typeof cartResponse === 'object') {
-            const transformed = transformCartResponse(cartResponse as any);
+            const transformed = transformCartResponse(cartResponse);
             setCart(transformed);
           }
         } catch (cartError: any) {
+          console.error('Cart fetch error:', cartError);
           if (cartError?.message?.includes('401')) {
             localStorage.removeItem('cartify_currentUser');
             setUser(null);
@@ -164,7 +147,8 @@ function App() {
         try {
           const wishlistResponse = await api.getWishlist();
           setWishlist(Array.isArray(wishlistResponse) ? wishlistResponse : []);
-        } catch {
+        } catch (wishlistError) {
+          console.error('Wishlist fetch error:', wishlistError);
           setWishlist([]);
         }
       } else {
@@ -172,17 +156,57 @@ function App() {
         setWishlist([]);
       }
     } catch (error: any) {
-      console.error('Failed to fetch data:', error);
+      console.error('❌ Failed to fetch data:', error);
+      setProducts([]);
+      showToast(`Failed to load products: ${error.message || 'API connection error'}`, 'error');
     } finally {
       setIsLoaded(true);
     }
+  }, [transformCartResponse, showToast]);
+
+  // Sync user from localStorage
+  useEffect(() => {
+    const checkUser = () => {
+      const userStr = localStorage.getItem('cartify_currentUser');
+      if (userStr) {
+        try { 
+          const userData = JSON.parse(userStr);
+          setUser(userData);
+        } catch { 
+          setUser(null); 
+        }
+      } else {
+        setUser(null);
+      }
+    };
+    checkUser();
+    window.addEventListener('storage', checkUser);
+    return () => window.removeEventListener('storage', checkUser);
   }, []);
 
+  // Initial data fetch
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
+  // Admin redirect on initial load
+  useEffect(() => {
+    const userStr = localStorage.getItem('cartify_currentUser');
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        if (userData.role === 'ADMIN' && location.pathname === '/') {
+          navigate('/admin');
+          showToast('Welcome to Admin Dashboard!', 'success');
+        }
+      } catch { }
+    }
+  }, [location.pathname, navigate, showToast]);
+
+  // Scroll to top on route change
+  useEffect(() => { 
+    window.scrollTo(0, 0); 
+  }, [location.pathname]);
 
   const handleLogout = () => {
     api.logout();
@@ -193,7 +217,6 @@ function App() {
     navigate('/');
   };
 
-  // INSTANT ADD TO CART - NO DELAYS
   const addToCart = async (product: Product) => {
     if (!product?.id) return;
 
@@ -204,13 +227,13 @@ function App() {
       return;
     }
 
-    // Close product modal if open
     if (selectedProduct) {
       setSelectedProduct(null);
     }
 
     setIsCartOpen(true);
 
+    // Optimistic update
     setCart(prevCart => {
       const existingItemIndex = prevCart.items.findIndex(i => (i.productId || i.id) === product.id);
 
@@ -255,14 +278,16 @@ function App() {
 
     showToast(`${product.name} added to cart!`, 'success');
 
+    // Background sync with API
     try {
       await api.addToCart(product.id, 1);
       const updatedCart = await api.getCart();
       if (updatedCart && typeof updatedCart === 'object') {
-        setCart(transformCartResponse(updatedCart as any));
+        setCart(transformCartResponse(updatedCart));
       }
     } catch (error: any) {
       console.error('Background sync error:', error);
+      showToast('Cart saved locally, will sync when online', 'info');
     }
   };
 
@@ -289,7 +314,7 @@ function App() {
     try {
       await api.updateCartQuantity(productId, newQuantity);
     } catch (error: any) {
-      console.error('Background sync error:', error);
+      console.error('Update quantity error:', error);
     }
   };
 
@@ -306,16 +331,7 @@ function App() {
     try {
       await api.removeFromCart(productId);
     } catch (error: any) {
-      console.error('Background sync error:', error);
-    }
-  };
-
-  const clearCart = async () => {
-    setCart({ items: [], totalItems: 0, totalAmount: 0 });
-    try {
-      await api.clearCart();
-    } catch (error: any) {
-      console.error('Background sync error:', error);
+      console.error('Remove from cart error:', error);
     }
   };
 
@@ -340,12 +356,13 @@ function App() {
     try {
       await api.toggleWishlist(product.id);
     } catch (error: any) {
+      // Revert on error
       if (isCurrentlyWishlisted) {
         setWishlist(prev => [...prev, product]);
       } else {
         setWishlist(prev => prev.filter(p => p.id !== product.id));
       }
-      showToast(error?.message || 'Failed to update wishlist', 'info');
+      showToast(error?.message || 'Failed to update wishlist', 'error');
     }
   };
 
@@ -361,7 +378,7 @@ function App() {
       setIsPaymentOpen(false);
       setIsOrderConfirmationOpen(true);
     } catch (error: any) {
-      showToast(error?.message || 'Failed to process order', 'info');
+      showToast(error?.message || 'Failed to process order', 'error');
     }
   };
 
@@ -472,7 +489,6 @@ function App() {
               : <Navigate to="/" replace />
           } />
 
-          {/* Catch all route - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -489,7 +505,7 @@ function App() {
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
         onCheckout={handleCheckout}
-        isSyncing={isCartSyncing}
+        isSyncing={false}
       />
 
       <ProductModal
