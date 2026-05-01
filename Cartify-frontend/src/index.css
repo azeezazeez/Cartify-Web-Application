@@ -27,18 +27,11 @@
     @apply bg-white text-brand-950 antialiased transition-colors duration-300;
   }
 
-  .dark body {
-    @apply bg-brand-950 text-brand-50;
-  }
-}
 
 .glass {
   @apply bg-white/80 backdrop-blur-md border border-white/20;
 }
 
-.dark .glass {
-  @apply bg-brand-900/80 border-brand-800/50;
-}
 
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -49,7 +42,6 @@
   scrollbar-width: none;
 }
 
-/* Dark mode utility overrides */
 .dark .bg-white {
   @apply bg-brand-900;
 }
