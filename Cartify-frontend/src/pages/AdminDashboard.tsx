@@ -50,7 +50,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setLoading(true);
         setError(null);
         try {
-            // ONLY REAL API DATA - NO MOCK DATA
+            // FIX: ONLY REAL API DATA - NO MOCK DATA WHATSOEVER
             const [ordersData, customersData, statsData] = await Promise.all([
                 api.adminGetAllOrders(),
                 api.adminGetAllCustomers(),
@@ -62,7 +62,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
             setError('Failed to fetch dashboard data. Please ensure the backend is running.');
-            // SET EMPTY ARRAYS - NO MOCK DATA
+            // FIX: SET EMPTY ARRAYS - NO MOCK DATA
             setOrders([]);
             setCustomers([]);
             setStats(null);
