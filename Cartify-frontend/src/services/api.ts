@@ -103,6 +103,26 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return (result && typeof result === 'object' && 'data' in result) ? result.data : result;
 }
 
+// Normalize a raw API item into the Product shape
+const normalizeProduct = (item: any): Product => ({
+  id: String(item.id || item.productId || ''),
+  name: String(item.name || item.productName || ''),
+  price: Number(item.price || item.productPrice || 0),
+  image: String(item.image || item.productImage || item.imageUrl || ''),
+  category: String(item.category || ''),
+  description: String(item.description || ''),
+  stock: Number(item.stock ?? item.stockQuantity ?? 0),
+  rating: Number(item.rating || 0),
+  reviews: Number(item.reviews || item.reviewCount || 0),
+  // spread the rest so we don't drop any extra fields
+  ...item,
+  // override with normalized values to ensure correctness
+  id: String(item.id || item.productId || ''),
+  name: String(item.name || item.productName || ''),
+  price: Number(item.price || item.productPrice || 0),
+  image: String(item.image || item.productImage || item.imageUrl || ''),
+});
+
 export const api = {
   // Auth
   async login(credentials: { email: string; password: string }) {
@@ -167,12 +187,14 @@ export const api = {
     if (queryString) url += `?${queryString}`;
 
     const response = await fetch(url);
-    return handleResponse<Product[]>(response);
+    const raw = await handleResponse<any[]>(response);
+    return Array.isArray(raw) ? raw.map(normalizeProduct) : [];
   },
 
   async getProductById(id: string): Promise<Product> {
     const response = await fetch(`${BASE_URL}/products/${id}`);
-    return handleResponse<Product>(response);
+    const raw = await handleResponse<any>(response);
+    return normalizeProduct(raw);
   },
 
   // Cart (Requires Auth)
@@ -251,14 +273,20 @@ export const api = {
       if (!response.ok) return [];
       const result = await response.json();
 
+      let rawItems: any[] = [];
+
       if (result && typeof result === 'object') {
         if ('success' in result && 'data' in result) {
-          return Array.isArray(result.data) ? result.data : [];
+          rawItems = Array.isArray(result.data) ? result.data : [];
+        } else if (Array.isArray(result)) {
+          rawItems = result;
+        } else if (result.items && Array.isArray(result.items)) {
+          rawItems = result.items;
         }
-        if (Array.isArray(result)) return result;
-        if (result.items && Array.isArray(result.items)) return result.items;
       }
-      return [];
+
+      // Normalize every item so that id/name/price/image are always set
+      return rawItems.map(normalizeProduct);
     } catch (error) {
       console.error('Error fetching wishlist:', error);
       return [];
@@ -270,8 +298,6 @@ export const api = {
     if (!userId) throw new Error('User not logged in');
 
     try {
-      console.log('Toggling wishlist - User ID:', userId, 'Product ID:', productId);
-
       // First, try to ADD to wishlist
       const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
         method: 'POST',
@@ -279,31 +305,27 @@ export const api = {
         body: JSON.stringify({ userId, productId }),
       });
 
-      // If add succeeds (200 OK), product was NOT in wishlist - now it is added
+      // 200 OK → successfully added
       if (addResponse.ok) {
-        console.log('Successfully added to wishlist');
         return { isWishlisted: true };
       }
 
-      // If add fails with 409 (Conflict), product IS already in wishlist - so remove it
+      // 409 Conflict → already in wishlist, so remove it
       if (addResponse.status === 409) {
-        console.log('Product already in wishlist, removing...');
         const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
           method: 'DELETE',
           headers: getAuthHeaders(),
         });
 
         if (removeResponse.ok) {
-          console.log('Successfully removed from wishlist');
           return { isWishlisted: false };
         } else {
           const errorData = await removeResponse.json();
-          console.error('Remove failed:', errorData);
           throw new Error(errorData.message || 'Failed to remove from wishlist');
         }
       }
 
-      // Handle other errors
+      // Other errors
       const errorData = await addResponse.json();
       throw new Error(errorData.message || 'Failed to toggle wishlist');
     } catch (error) {
@@ -311,7 +333,6 @@ export const api = {
       throw error;
     }
   },
-
 
   async createOrder(): Promise<any> {
     const userId = getUserId();
@@ -366,7 +387,6 @@ export const api = {
     });
     return handleResponse<any>(response);
   },
-
 
   async getUserProfile(): Promise<any> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
