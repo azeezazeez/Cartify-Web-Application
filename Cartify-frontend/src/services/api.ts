@@ -52,10 +52,13 @@ const getCurrentUser = (): any | null => {
   }
 };
 
-// Helper to get auth token
 const getAuthToken = (): string | null => {
   const user = getCurrentUser();
-  return user?.token || null;
+  return user?.token 
+    || user?.accessToken 
+    || user?.jwt
+    || user?.access_token
+    || null;
 };
 
 // Helper to get current user ID from localStorage
