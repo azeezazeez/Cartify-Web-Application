@@ -2,13 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { DollarSign } from 'lucide-react';
 import {
+    Package,
     Users,
     ShoppingBag,
     TrendingUp,
     Clock,
+    XCircle,
     Search,
     Filter,
     Eye,
+    ChevronDown,
     RefreshCw,
     AlertCircle,
     X
@@ -47,20 +50,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
         setLoading(true);
         setError(null);
         try {
-            // Fetch real data from API - NO MOCK DATA
+            // ONLY REAL API DATA - NO MOCK DATA
             const [ordersData, customersData, statsData] = await Promise.all([
                 api.adminGetAllOrders(),
                 api.adminGetAllCustomers(),
                 api.adminGetOrderStats()
             ]);
-            
             setOrders(ordersData || []);
             setCustomers(customersData || []);
             setStats(statsData);
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
             setError('Failed to fetch dashboard data. Please ensure the backend is running.');
-            // Set empty arrays - NO MOCK DATA
+            // SET EMPTY ARRAYS - NO MOCK DATA
             setOrders([]);
             setCustomers([]);
             setStats(null);
@@ -79,7 +81,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             if (selectedOrder?.orderId === orderId) {
                 setSelectedOrder(updatedOrder);
             }
-            // Refresh stats after status update
             const newStats = await api.adminGetOrderStats();
             setStats(newStats);
         } catch (err) {
@@ -121,6 +122,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 const aValue = a[sortConfig.key as keyof AdminOrder];
                 const bValue = b[sortConfig.key as keyof AdminOrder];
 
+                // Check for undefined values
                 if (aValue === undefined) return 1;
                 if (bValue === undefined) return -1;
 
@@ -264,7 +266,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div className="flex space-x-2 sm:space-x-6 mt-6 overflow-x-auto pb-2">
+                    <div className="flex space-x-2 sm:space-x-6 mt-6 overflow-x-auto pb-2 scrollbar-hide">
                         {[
                             { id: 'overview', label: 'Overview', icon: TrendingUp },
                             { id: 'orders', label: 'Orders', icon: ShoppingBag },
@@ -328,7 +330,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <div className="bg-white rounded-xl p-6 shadow-sm">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600">Total Customers</p>
+                                        <p className="text-sm text-gray-600">Customers</p>
                                         <p className="text-2xl font-bold text-gray-900 mt-2">
                                             {customers.length || 0}
                                         </p>
@@ -342,7 +344,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             <div className="bg-white rounded-xl p-6 shadow-sm">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-600">Pending Orders</p>
+                                        <p className="text-sm text-gray-600">Pending</p>
                                         <p className="text-2xl font-bold text-gray-900 mt-2">
                                             {stats.pendingOrders || 0}
                                         </p>
@@ -354,44 +356,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                             </div>
                         </div>
 
-                        {/* Recent Orders */}
+                        {/* Recent Orders - Minimalist View */}
                         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                                 <h3 className="font-bold text-gray-900">Recent Orders</h3>
-                                <button 
-                                    className="text-brand-600 text-sm font-medium hover:underline" 
-                                    onClick={() => setActiveTab('orders')}
-                                >
-                                    View All
-                                </button>
-                            </div>
-                            <div className="divide-y divide-gray-100">
-                                {stats.recentOrders && stats.recentOrders.length > 0 ? (
-                                    stats.recentOrders.slice(0, 5).map((order) => (
-                                        <div key={order.orderId} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
-                                                    {order.customerName?.[0] || 'U'}
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900">{order.customerName}</p>
-                                                    <p className="text-xs text-gray-500">#{order.orderId?.slice(0, 8)} • {formatDate(order.orderDate)}</p>
-                                                </div>
+                                <button className="text-brand-600 text-sm font-medium hover:underline" onClick={() => setActiveTab('orders')}>View All</button>
+                             </div>
+                             <div className="divide-y divide-gray-100">
+                                {stats.recentOrders?.slice(0, 5).map((order) => (
+                                    <div key={order.orderId} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center space-x-4">
+                                            <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
+                                                {order.customerName?.[0] || 'U'}
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
-                                                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
-                                                    {order.status}
-                                                </span>
+                                            <div>
+                                                <p className="font-medium text-gray-900">{order.customerName}</p>
+                                                <p className="text-xs text-gray-500">#{order.orderId?.slice(0, 8)} • {formatDate(order.orderDate)}</p>
                                             </div>
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="px-6 py-8 text-center text-gray-500">
-                                        No recent orders found
+                                        <div className="text-right">
+                                            <p className="font-bold text-gray-900">{formatCurrency(order.totalAmount)}</p>
+                                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${getStatusColor(order.status)}`}>
+                                                {order.status}
+                                            </span>
+                                        </div>
                                     </div>
-                                )}
-                            </div>
+                                ))}
+                             </div>
                         </div>
                     </div>
                 )}
@@ -441,78 +432,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 <table className="w-full">
                                     <thead className="bg-gray-50 border-b border-gray-100">
                                         <tr>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600" onClick={() => handleSort('orderId')}>
-                                                Order ID
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600" onClick={() => handleSort('customerName')}>
-                                                Customer
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600" onClick={() => handleSort('orderDate')}>
-                                                Date
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600" onClick={() => handleSort('totalAmount')}>
-                                                Amount
-                                            </th>
-                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                                Actions
-                                            </th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('orderId')}>Order ID</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('customerName')}>Customer</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('orderDate')}>Date</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('totalAmount')}>Amount</th>
+                                            <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {paginatedOrders.length > 0 ? (
-                                            paginatedOrders.map((order) => (
-                                                <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                                        #{order.orderId?.slice(0, 8)}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
-                                                        <p className="text-xs text-gray-500">{order.customerEmail}</p>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-600">{formatDate(order.orderDate)}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{formatCurrency(order.totalAmount)}</td>
-                                                    <td className="px-6 py-4">
-                                                        <select
-                                                            value={order.status}
-                                                            onChange={(e) => handleUpdateOrderStatus(order.orderId, e.target.value)}
-                                                            disabled={updatingStatus === order.orderId}
-                                                            className={`text-xs font-bold rounded-full px-3 py-1 border-0 focus:ring-2 focus:ring-brand-500 cursor-pointer ${getStatusColor(order.status)}`}
-                                                        >
-                                                            <option value="PENDING">Pending</option>
-                                                            <option value="CONFIRMED">Confirmed</option>
-                                                            <option value="PROCESSING">Processing</option>
-                                                            <option value="SHIPPED">Shipped</option>
-                                                            <option value="DELIVERED">Delivered</option>
-                                                            <option value="CANCELLED">Cancelled</option>
-                                                        </select>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedOrder(order);
-                                                                setShowOrderDetails(true);
-                                                            }}
-                                                            className="p-2 hover:bg-brand-50 rounded-full transition-colors text-brand-600"
-                                                            aria-label="View order details"
-                                                        >
-                                                            <Eye className="w-5 h-5" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                                                    No orders found matching your criteria
+                                        {paginatedOrders.map((order) => (
+                                            <tr key={order.orderId} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                                    #{order.orderId?.slice(0, 8)}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
+                                                    <p className="text-xs text-gray-500">{order.customerEmail}</p>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{formatDate(order.orderDate)}</td>
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-900">{formatCurrency(order.totalAmount)}</td>
+                                                <td className="px-6 py-4">
+                                                    <select
+                                                        value={order.status}
+                                                        onChange={(e) => handleUpdateOrderStatus(order.orderId, e.target.value)}
+                                                        disabled={updatingStatus === order.orderId}
+                                                        className={`text-xs font-bold rounded-full px-3 py-1 border-0 focus:ring-2 focus:ring-brand-500 cursor-pointer ${getStatusColor(order.status)}`}
+                                                    >
+                                                        <option value="PENDING">Pending</option>
+                                                        <option value="CONFIRMED">Confirmed</option>
+                                                        <option value="PROCESSING">Processing</option>
+                                                        <option value="SHIPPED">Shipped</option>
+                                                        <option value="DELIVERED">Delivered</option>
+                                                        <option value="CANCELLED">Cancelled</option>
+                                                    </select>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedOrder(order);
+                                                            setShowOrderDetails(true);
+                                                        }}
+                                                        className="p-2 hover:bg-brand-50 rounded-full transition-colors text-brand-600"
+                                                    >
+                                                        <Eye className="w-5 h-5" />
+                                                    </button>
                                                 </td>
                                             </tr>
-                                        )}
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
+                            
+                            {filteredOrders.length === 0 && (
+                                <div className="text-center py-12">
+                                    <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                    <p className="text-gray-500">No orders found matching your criteria</p>
+                                </div>
+                            )}
 
                             {totalPages > 1 && (
                                 <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
@@ -521,14 +498,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                         <button
                                             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                             disabled={currentPage === 1}
-                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium disabled:opacity-50"
                                         >
                                             Prev
                                         </button>
                                         <button
                                             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                             disabled={currentPage === totalPages}
-                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                                            className="px-3 py-1 bg-white border border-gray-200 rounded-lg text-xs font-medium disabled:opacity-50"
                                         >
                                             Next
                                         </button>
@@ -568,37 +545,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {filteredCustomers.length > 0 ? (
-                                            filteredCustomers.map((customer) => (
-                                                <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center space-x-3">
-                                                            <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
-                                                                {customer.name?.[0] || 'U'}
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-gray-900">{customer.name}</p>
-                                                                <p className="text-xs text-gray-500">{customer.email}</p>
-                                                            </div>
+                                        {filteredCustomers.map((customer) => (
+                                            <tr key={customer.id} className="hover:bg-gray-50">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold">
+                                                            {customer.name[0]}
                                                         </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-600">{customer.joinedDate?.slice(0, 10) || 'N/A'}</td>
-                                                    <td className="px-6 py-4 text-sm font-medium">{customer.totalOrders || 0}</td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{formatCurrency(customer.totalSpent || 0)}</td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <span className="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-gray-100 text-gray-600">
-                                                            {customer.role || 'USER'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                                    No customers found matching your criteria
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">{customer.name}</p>
+                                                            <p className="text-xs text-gray-500">{customer.email}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-600">{customer.joinedDate?.slice(0, 10)}</td>
+                                                <td className="px-6 py-4 text-sm font-medium">{customer.totalOrders || 0}</td>
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-900">{formatCurrency(customer.totalSpent || 0)}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-gray-100 text-gray-600">
+                                                        {customer.role}
+                                                    </span>
                                                 </td>
                                             </tr>
-                                        )}
+                                        ))}
                                     </tbody>
                                 </table>
                             </div>
@@ -626,6 +595,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                                 className="relative bg-white rounded-3xl max-w-2xl w-full mx-auto shadow-2xl overflow-hidden"
                             >
+                                {/* Modal Header */}
                                 <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
                                     <div>
                                         <p className="text-xs font-bold text-brand-400 uppercase tracking-widest mb-1">Order Summary</p>
@@ -636,13 +606,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     <button
                                         onClick={() => setShowOrderDetails(false)}
                                         className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                                        aria-label="Close modal"
                                     >
                                         <X className="w-6 h-6 text-gray-400" />
                                     </button>
                                 </div>
 
                                 <div className="p-8 space-y-8">
+                                    {/* Info Grid */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 font-sans">
                                         <div>
                                             <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Customer</h4>
@@ -657,6 +627,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                         </div>
                                     </div>
 
+                                    {/* Items List */}
                                     <div>
                                         <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4">Items Ordered</h4>
                                         <div className="space-y-4">
@@ -664,7 +635,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                 <div key={idx} className="flex items-center justify-between pb-4 border-b border-gray-50 last:border-0 last:pb-0">
                                                     <div className="flex items-center space-x-4">
                                                         <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-xs font-bold text-gray-400">
-                                                            {item.productName?.charAt(0) || 'P'}
+                                                            IMG
                                                         </div>
                                                         <div>
                                                             <p className="text-sm font-bold text-gray-900">{item.productName}</p>
@@ -672,13 +643,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                         </div>
                                                     </div>
                                                     <p className="font-bold text-gray-900">
-                                                        {formatCurrency((item.price || 0) * (item.quantity || 0))}
+                                                        {formatCurrency(item.price * item.quantity)}
                                                     </p>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
+                                    {/* Summary & Status */}
                                     <div className="flex flex-col sm:flex-row gap-8 pt-6 border-t border-gray-100">
                                         <div className="flex-1 space-y-4">
                                             <h4 className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Order Management</h4>
