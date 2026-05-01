@@ -41,7 +41,7 @@ export interface AdminCustomer {
   totalSpent: number;
 }
 
-// Helper to get current user from localStorage
+// Helpers
 const getCurrentUser = (): any | null => {
   const user = localStorage.getItem('cartify_currentUser');
   if (!user) return null;
@@ -52,25 +52,21 @@ const getCurrentUser = (): any | null => {
   }
 };
 
-// Helper to get auth token
 const getAuthToken = (): string | null => {
   const user = getCurrentUser();
   return user?.token || null;
 };
 
-// Helper to get current user ID from localStorage
 const getUserId = (): number | null => {
   const user = getCurrentUser();
   return user?.id || null;
 };
 
-// Helper to check if current user is admin
 const isAdmin = (): boolean => {
   const user = getCurrentUser();
   return user?.role === 'ADMIN';
 };
 
-// Helper to get auth headers for authenticated requests
 const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
   const headers: HeadersInit = {
@@ -82,14 +78,13 @@ const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
-// Standard response handler with better error handling
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text();
     try {
       const result = JSON.parse(text);
       throw new Error(result.message || `HTTP ${response.status}: ${response.statusText}`);
-    } catch (e) {
+    } catch {
       throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
     }
   }
@@ -104,7 +99,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
-  // Auth
+
+  // AUTH
   async login(credentials: { email: string; password: string }) {
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
@@ -156,7 +152,7 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  // Products (Public - No Auth)
+  // PRODUCTS
   async getProducts(category?: string, search?: string): Promise<Product[]> {
     let url = `${BASE_URL}/products`;
     const params = new URLSearchParams();
@@ -175,7 +171,7 @@ export const api = {
     return handleResponse<Product>(response);
   },
 
-  // Cart (Requires Auth)
+  // CART
   async getCart(): Promise<any> {
     const userId = getUserId();
     if (!userId) return { items: [], totalItems: 0, totalAmount: 0 };
@@ -187,8 +183,7 @@ export const api = {
       if (!response.ok) return { items: [], totalItems: 0, totalAmount: 0 };
       const result = await response.json();
       return result.data || result;
-    } catch (error) {
-      console.error('Error fetching cart:', error);
+    } catch {
       return { items: [], totalItems: 0, totalAmount: 0 };
     }
   },
@@ -239,7 +234,7 @@ export const api = {
     await handleResponse<any>(response);
   },
 
-  // Wishlist (Requires Auth)
+  // WISHLIST
   async getWishlist(): Promise<Product[]> {
     const userId = getUserId();
     if (!userId) return [];
@@ -250,17 +245,8 @@ export const api = {
       });
       if (!response.ok) return [];
       const result = await response.json();
-
-      if (result && typeof result === 'object') {
-        if ('success' in result && 'data' in result) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        if (Array.isArray(result)) return result;
-        if (result.items && Array.isArray(result.items)) return result.items;
-      }
-      return [];
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
+      return result.data || [];
+    } catch {
       return [];
     }
   },
@@ -269,50 +255,27 @@ export const api = {
     const userId = getUserId();
     if (!userId) throw new Error('User not logged in');
 
-    try {
-      console.log('Toggling wishlist - User ID:', userId, 'Product ID:', productId);
+    const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId, productId }),
+    });
 
-      // First, try to ADD to wishlist
-      const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
-        method: 'POST',
+    if (addResponse.ok) return { isWishlisted: true };
+
+    if (addResponse.status === 409) {
+      const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+        method: 'DELETE',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ userId, productId }),
       });
 
-      // If add succeeds (200 OK), product was NOT in wishlist - now it is added
-      if (addResponse.ok) {
-        console.log('Successfully added to wishlist');
-        return { isWishlisted: true };
-      }
-
-      // If add fails with 409 (Conflict), product IS already in wishlist - so remove it
-      if (addResponse.status === 409) {
-        console.log('Product already in wishlist, removing...');
-        const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        });
-
-        if (removeResponse.ok) {
-          console.log('Successfully removed from wishlist');
-          return { isWishlisted: false };
-        } else {
-          const errorData = await removeResponse.json();
-          console.error('Remove failed:', errorData);
-          throw new Error(errorData.message || 'Failed to remove from wishlist');
-        }
-      }
-
-      // Handle other errors
-      const errorData = await addResponse.json();
-      throw new Error(errorData.message || 'Failed to toggle wishlist');
-    } catch (error) {
-      console.error('Toggle wishlist error:', error);
-      throw error;
+      if (removeResponse.ok) return { isWishlisted: false };
     }
+
+    throw new Error('Failed to toggle wishlist');
   },
 
-
+  // ORDERS
   async createOrder(): Promise<any> {
     const userId = getUserId();
     if (!userId) throw new Error('User not logged in');
@@ -323,11 +286,7 @@ export const api = {
       body: JSON.stringify({ shippingAddress: 'Default Address' }),
     });
 
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || 'Failed to place order');
-    }
-    return result.data;
+    return handleResponse<any>(response);
   },
 
   async getOrderHistory(): Promise<any[]> {
@@ -335,25 +294,15 @@ export const api = {
     if (!userId) throw new Error('User not logged in');
 
     const response = await fetch(`${BASE_URL}/orders/user/${userId}`, {
-      method: 'GET',
       headers: getAuthHeaders(),
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Failed to fetch orders: HTTP ${response.status} — ${text}`);
-    }
-
     const result = await response.json();
-
-    if (result?.success && Array.isArray(result.data)) return result.data;
-    if (Array.isArray(result)) return result;
-    return [];
+    return result.data || [];
   },
 
   async getOrderById(orderId: string): Promise<any> {
     const response = await fetch(`${BASE_URL}/orders/${orderId}`, {
-      method: 'GET',
       headers: getAuthHeaders(),
     });
     return handleResponse<any>(response);
@@ -367,19 +316,19 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-
-  async getUserProfile(): Promise<any> {
+  // ✅ FIXED HERE
+  async updateUserProfile(profileData: any): Promise<any> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
+      method: 'PUT',
       headers: getAuthHeaders(),
+      body: JSON.stringify(profileData),
     });
     return handleResponse<any>(response);
   },
 
-  async updateUserProfile(profileData: any): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/user/profile`, {
-      method: 'PUT',
+  async getUserProfile(): Promise<any> {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
       headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),
     });
     return handleResponse<any>(response);
   },
@@ -393,67 +342,59 @@ export const api = {
     return handleResponse<void>(response);
   },
 
-  // Admin Methods (Requires Auth + Admin Role)
+  // ADMIN
   async adminGetAllOrders(): Promise<AdminOrder[]> {
-    if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
+    if (!isAdmin()) throw new Error('Unauthorized');
 
     const response = await fetch(`${BASE_URL}/admin/orders`, {
       headers: getAuthHeaders(),
     });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch orders');
-    return data.data;
+    return handleResponse<AdminOrder[]>(response);
   },
 
   async adminGetOrderStats(): Promise<OrderStats> {
-    if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
+    if (!isAdmin()) throw new Error('Unauthorized');
 
     const response = await fetch(`${BASE_URL}/admin/orders/stats`, {
       headers: getAuthHeaders(),
     });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch stats');
-    return data.data;
+    return handleResponse<OrderStats>(response);
   },
 
   async adminUpdateOrderStatus(orderId: string, status: string): Promise<AdminOrder> {
-    if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
+    if (!isAdmin()) throw new Error('Unauthorized');
 
     const response = await fetch(`${BASE_URL}/admin/orders/${orderId}/status`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({ status }),
     });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update order status');
-    return data.data;
+    return handleResponse<AdminOrder>(response);
   },
 
   async adminGetAllCustomers(): Promise<AdminCustomer[]> {
-    if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
+    if (!isAdmin()) throw new Error('Unauthorized');
 
     const response = await fetch(`${BASE_URL}/admin/customers`, {
       headers: getAuthHeaders(),
     });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch customers');
-    return data.data;
+    return handleResponse<AdminCustomer[]>(response);
   },
 
-  // Helper Methods
-  isAdmin(): boolean {
+  // HELPERS
+  isAdmin() {
     return isAdmin();
   },
 
-  getCurrentUser(): any | null {
+  getCurrentUser() {
     return getCurrentUser();
   },
 
-  getUserId(): number | null {
+  getUserId() {
     return getUserId();
   },
 
-  getAuthToken(): string | null {
+  getAuthToken() {
     return getAuthToken();
   }
 };
