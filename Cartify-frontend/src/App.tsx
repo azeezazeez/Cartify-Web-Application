@@ -47,7 +47,7 @@ function App() {
     const saved = localStorage.getItem('cartify_theme');
     return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Featured');
@@ -102,6 +102,7 @@ function App() {
 
   const fetchData = useCallback(async () => {
     try {
+      fetch('https://cartify-web-application.onrender.com/api/products').catch(() => { });
       const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
       const productsResponse = await api.getProducts();
       setProducts(Array.isArray(productsResponse) ? productsResponse : []);
