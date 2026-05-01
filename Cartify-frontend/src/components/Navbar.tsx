@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Search, Menu, X, User, Heart, Package, Sun, Moon } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, User, Heart, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -58,35 +58,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isWishlistPage = location.pathname === '/wishlist';
   const isProfilePage = location.pathname === '/profile';
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+ useEffect(() => {
+  const handleScroll = () => {
+    const scrolled = window.scrollY > 120;
+    setIsScrolled(scrolled);
+    setIsPastProductsSection(scrolled); 
+  };
 
-      // Target the hero/carousel section specifically
-      const heroSection =
-        document.querySelector('[data-hero]') ||
-        document.querySelector('.hero-section') ||
-        document.querySelector('section:first-of-type') ||
-        document.querySelector('main > div:first-child > section') ||
-        document.querySelector('main > section:first-child');
+  window.addEventListener('scroll', handleScroll);
+  handleScroll();
 
-      if (heroSection) {
-        const heroBottom = heroSection.getBoundingClientRect().bottom;
-        // Snap exactly when hero bottom reaches the navbar height (64px / 80px)
-        const navHeight = window.innerWidth >= 640 ? 80 : 64;
-        setIsPastProductsSection(heroBottom <= navHeight);
-      } else {
-        // Fallback: use scroll position
-        const approxHeroHeight = window.innerHeight;
-        setIsPastProductsSection(window.scrollY >= approxHeroHeight - 80);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -216,14 +199,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const useWhiteBg = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage;
 
   const getTextColor = () => {
-    if (isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage) {
-      return isDark ? 'text-white' : 'text-gray-900';
-    }
-    if (isPastProductsSection) {
-      return isDark ? 'text-white' : 'text-gray-900';
-    }
-    return 'text-white';
-  };
+  return isScrolled ? 'text-gray-900' : 'text-white';
+};
 
   const getLogoColor = () => {
     if (isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage) {
@@ -600,15 +577,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* Theme toggle — desktop */}
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
-          >
-            {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </button>
-
           {/* Cart button */}
           <button
             onClick={onCartClick}
@@ -772,11 +740,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span className="text-base font-medium">Search</span>
                   </div>
 
-                  {/* Theme toggle — mobile */}
-                  <div
-                    onClick={toggleTheme}
-                    className={cn("flex items-center justify-between py-3 px-4 -mx-4 rounded-lg transition-colors cursor-pointer", mobileText, mobileHover)}
-                  >
                     <div className="flex items-center space-x-3">
                       {isDark
                         ? <Sun className="w-5 h-5 text-amber-400" />
