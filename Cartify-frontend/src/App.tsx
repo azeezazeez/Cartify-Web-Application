@@ -29,7 +29,7 @@ const CartDrawer = React.memo(OriginalCartDrawer);
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="min-h-screen bg-white dark:bg-brand-950 flex items-center justify-center">
+  <div className="min-h-screen bg-white flex items-center justify-center">
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
@@ -74,7 +74,7 @@ function App() {
 
   const removeToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
-  // Memoize cart items
+  // Memoize cart values
   const memoizedCartItems = useMemo(() => cart.items, [cart.items]);
   const memoizedCartTotal = useMemo(() => cart.totalAmount, [cart.totalAmount]);
   const memoizedCartCount = useMemo(() => cart.totalItems, [cart.totalItems]);
@@ -114,11 +114,10 @@ function App() {
     try {
       setIsLoaded(false);
       const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
-      
-      // Fetch products from your actual API
+
       console.log('Fetching products from API...');
       const productsResponse = await api.getProducts();
-      
+
       if (Array.isArray(productsResponse) && productsResponse.length > 0) {
         setProducts(productsResponse);
         console.log(`✅ Loaded ${productsResponse.length} products from API`);
@@ -145,6 +144,7 @@ function App() {
         }
 
         try {
+          // api.getWishlist() now returns properly normalized Product[]
           const wishlistResponse = await api.getWishlist();
           setWishlist(Array.isArray(wishlistResponse) ? wishlistResponse : []);
         } catch (wishlistError) {
@@ -169,11 +169,11 @@ function App() {
     const checkUser = () => {
       const userStr = localStorage.getItem('cartify_currentUser');
       if (userStr) {
-        try { 
+        try {
           const userData = JSON.parse(userStr);
           setUser(userData);
-        } catch { 
-          setUser(null); 
+        } catch {
+          setUser(null);
         }
       } else {
         setUser(null);
@@ -204,8 +204,8 @@ function App() {
   }, [location.pathname, navigate, showToast]);
 
   // Scroll to top on route change
-  useEffect(() => { 
-    window.scrollTo(0, 0); 
+  useEffect(() => {
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   const handleLogout = () => {
@@ -246,7 +246,6 @@ function App() {
           quantity: newQuantity,
           subtotal: newQuantity * (existingItem.productPrice || existingItem.price || 0),
         };
-
         return {
           items: updatedItems,
           totalItems: prevCart.totalItems + 1,
@@ -267,7 +266,6 @@ function App() {
           price: product.price,
           image: product.image,
         };
-
         return {
           items: [...prevCart.items, newItem],
           totalItems: prevCart.totalItems + 1,
@@ -345,12 +343,13 @@ function App() {
 
     const isCurrentlyWishlisted = wishlist.some(p => p.id === product.id);
 
+    // Optimistic update
     if (isCurrentlyWishlisted) {
       setWishlist(prev => prev.filter(p => p.id !== product.id));
       showToast(`${product.name} removed from wishlist`, 'info');
     } else {
       setWishlist(prev => [...prev, product]);
-      showToast(`${product.name} added to wishlist`, 'success');
+      showToast(`${product.name} added to wishlist!`, 'success');
     }
 
     try {
@@ -387,7 +386,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-brand-950 font-sans">
+    <div className="min-h-screen bg-white font-sans">
       <Navbar
         cartCount={memoizedCartCount}
         wishlistCount={wishlist.length}
@@ -472,20 +471,20 @@ function App() {
           } />
 
           <Route path="/admin/orders" element={
-            user?.role === 'ADMIN' 
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+            user?.role === 'ADMIN'
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
               : <Navigate to="/" replace />
           } />
-          
+
           <Route path="/admin/products" element={
-            user?.role === 'ADMIN' 
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+            user?.role === 'ADMIN'
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
               : <Navigate to="/" replace />
           } />
-          
+
           <Route path="/admin/customers" element={
-            user?.role === 'ADMIN' 
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+            user?.role === 'ADMIN'
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
               : <Navigate to="/" replace />
           } />
 
