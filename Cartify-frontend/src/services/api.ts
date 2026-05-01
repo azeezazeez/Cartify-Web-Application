@@ -54,11 +54,7 @@ const getCurrentUser = (): any | null => {
 
 const getAuthToken = (): string | null => {
   const user = getCurrentUser();
-  return user?.token 
-    || user?.accessToken 
-    || user?.jwt
-    || user?.access_token
-    || null;
+  return user?.token || null;
 };
 
 // Helper to get current user ID from localStorage
