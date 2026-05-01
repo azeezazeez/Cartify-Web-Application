@@ -312,6 +312,7 @@ export const api = {
     }
   },
 
+
   async createOrder(): Promise<any> {
     const userId = getUserId();
     if (!userId) throw new Error('User not logged in');
@@ -366,123 +367,30 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  // ─── Profile (uses userId-based endpoints with localStorage fallback) ────────
 
   async getUserProfile(): Promise<any> {
-    const userId = getUserId();
-    const localUser = getCurrentUser();
-
-    // Always return localStorage data as the base — it's always fresh from login
-    if (!userId || !localUser) throw new Error('User not logged in');
-
-    // Try the user-specific endpoint; fall back to localStorage if unavailable
-    const endpoints = [
-      `${BASE_URL}/users/${userId}`,
-      `${BASE_URL}/auth/users/${userId}`,
-      `${BASE_URL}/admin/customers/${userId}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await fetch(url, { headers: getAuthHeaders() });
-        if (response.ok) {
-          const result = await response.json();
-          const data = result?.data ?? result;
-          // Merge with localStorage so we never lose token/role
-          return { ...localUser, ...data };
-        }
-      } catch {
-        // try next
-      }
-    }
-
-    // All endpoints failed — return localStorage data so the UI still works
-    console.warn('Profile endpoint unavailable, using cached user data');
-    return localUser;
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<any>(response);
   },
 
   async updateUserProfile(profileData: any): Promise<any> {
-    const userId = getUserId();
-    const localUser = getCurrentUser();
-    if (!userId || !localUser) throw new Error('User not logged in');
-
-    // Try user-specific PUT endpoints
-    const endpoints = [
-      `${BASE_URL}/users/${userId}`,
-      `${BASE_URL}/auth/users/${userId}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await fetch(url, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(profileData),
-        });
-        if (response.ok) {
-          const result = await response.json();
-          const updated = result?.data ?? result;
-          // Persist updated data to localStorage so it survives page refreshes
-          const merged = { ...localUser, ...updated };
-          localStorage.setItem('cartify_currentUser', JSON.stringify(merged));
-          return merged;
-        }
-      } catch {
-        // try next
-      }
-    }
-
-    // No endpoint worked — update localStorage only so the UI reflects the change
-    console.warn('Profile update endpoint unavailable, saving locally only');
-    const merged = { ...localUser, ...profileData };
-    localStorage.setItem('cartify_currentUser', JSON.stringify(merged));
-    return merged;
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData),
+    });
+    return handleResponse<any>(response);
   },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const userId = getUserId();
-    if (!userId) throw new Error('User not logged in');
-
-    // Try multiple likely password-change endpoints
-    const attempts: Array<{ url: string; method: string; body: object }> = [
-      {
-        url: `${BASE_URL}/auth/change-password`,
-        method: 'PUT',
-        body: { userId, currentPassword, newPassword },
-      },
-      {
-        url: `${BASE_URL}/users/${userId}/change-password`,
-        method: 'PUT',
-        body: { currentPassword, newPassword },
-      },
-      {
-        url: `${BASE_URL}/auth/reset-password`,
-        method: 'POST',
-        body: { userId, currentPassword, newPassword },
-      },
-    ];
-
-    for (const { url, method, body } of attempts) {
-      try {
-        const response = await fetch(url, {
-          method,
-          headers: getAuthHeaders(),
-          body: JSON.stringify(body),
-        });
-        if (response.ok) return; // success
-        if (response.status === 400 || response.status === 401) {
-          // Definitive failure (wrong current password etc.) — surface the error
-          const result = await response.json().catch(() => ({}));
-          throw new Error(result.message || 'Incorrect current password');
-        }
-        // 404 / 405 → try next endpoint
-      } catch (err: any) {
-        // Re-throw only definitive errors, not "endpoint not found" ones
-        if (err.message && !err.message.startsWith('HTTP')) throw err;
-      }
-    }
-
-    throw new Error('Password change is not supported by the server at this time');
+    const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return handleResponse<void>(response);
   },
 
   // Admin Methods (Requires Auth + Admin Role)
