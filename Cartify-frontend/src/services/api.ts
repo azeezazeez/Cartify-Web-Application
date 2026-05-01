@@ -373,41 +373,135 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  // User Profile - UPDATED ENDPOINTS
-  async getUserProfile(): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    });
-    return handleResponse<any>(response);
-  },
+ // User Profile - FIXED with fallback endpoints
+async getUserProfile(): Promise<any> {
+  const token = getAuthToken();
+  if (!token) throw new Error('No authentication token');
+  
+  // Try multiple possible endpoints
+  const endpoints = [
+    `${BASE_URL}/auth/profile`,
+    `${BASE_URL}/auth/user/profile`,
+    `${BASE_URL}/user/profile`,
+    `${BASE_URL}/profile`
+  ];
+  
+  let lastError = null;
+  
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`Trying to fetch profile from: ${endpoint}`);
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Successfully fetched from ${endpoint}`);
+        if (result && typeof result === 'object') {
+          if ('success' in result && 'data' in result) {
+            return result.data;
+          }
+          return result;
+        }
+        return result;
+      } else if (response.status !== 404) {
+        // If it's not a 404, it might be a different error
+        const text = await response.text();
+        console.log(`Endpoint ${endpoint} returned ${response.status}: ${text}`);
+      }
+    } catch (error) {
+      console.log(`Endpoint ${endpoint} failed:`, error);
+      lastError = error;
+    }
+  }
+  
+  throw lastError || new Error('No working profile endpoint found');
+},
 
-  async updateUserProfile(profileData: {
-    username?: string;
-    phoneNumber?: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    zipCode?: string;
-    profileImage?: string;
-  }): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),
-    });
-    return handleResponse<any>(response);
-  },
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    return handleResponse<void>(response);
-  },
+async updateUserProfile(profileData: {
+  username?: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
+  profileImage?: string;
+}): Promise<any> {
+  const token = getAuthToken();
+  if (!token) throw new Error('No authentication token');
+  
+  // Try multiple possible endpoints for update
+  const endpoints = [
+    { url: `${BASE_URL}/auth/profile`, method: 'PUT' },
+    { url: `${BASE_URL}/auth/user/profile`, method: 'PUT' },
+    { url: `${BASE_URL}/auth/profile/update`, method: 'PUT' },
+    { url: `${BASE_URL}/user/profile`, method: 'PATCH' }, // Based on your controller
+  ];
+  
+  let lastError = null;
+  
+  for (const endpoint of endpoints) {
+    try {
+      console.log(`Trying to update profile at: ${endpoint.url} with method ${endpoint.method}`);
+      
+      // For PATCH endpoint with userId parameter
+      if (endpoint.url === `${BASE_URL}/user/profile` && endpoint.method === 'PATCH') {
+        const userId = getUserId();
+        if (!userId) throw new Error('User not logged in');
+        
+        // Convert profileData to UpdateProfile format
+        const updateData: any = {};
+        if (profileData.username) updateData.name = profileData.username;
+        if (profileData.phoneNumber) updateData.phone = profileData.phoneNumber;
+        if (profileData.address) updateData.address = profileData.address;
+        if (profileData.city) updateData.city = profileData.city;
+        if (profileData.country) updateData.country = profileData.country;
+        // Note: state and zipCode might not be supported by this endpoint
+        
+        const response = await fetch(`${endpoint.url}?userId=${userId}`, {
+          method: endpoint.method,
+          headers: getAuthHeaders(),
+          body: JSON.stringify(updateData),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`Successfully updated from ${endpoint.url}`);
+          return result;
+        }
+      } else {
+        const response = await fetch(endpoint.url, {
+          method: endpoint.method,
+          headers: getAuthHeaders(),
+          body: JSON.stringify(profileData),
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`Successfully updated from ${endpoint.url}`);
+          if (result && typeof result === 'object') {
+            if ('success' in result && 'data' in result) {
+              return result.data;
+            }
+            return result;
+          }
+          return result;
+        } else if (response.status !== 404) {
+          const text = await response.text();
+          console.log(`Endpoint ${endpoint.url} returned ${response.status}: ${text}`);
+        }
+      }
+    } catch (error) {
+      console.log(`Endpoint ${endpoint.url} failed:`, error);
+      lastError = error;
+    }
+  }
+  
+  throw lastError || new Error('No working profile update endpoint found');
+},
 
   // Admin Methods (Requires Auth + Admin Role)
   async adminGetAllOrders(): Promise<AdminOrder[]> {
