@@ -369,7 +369,7 @@ export const api = {
 
 
   async getUserProfile(): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/user/profile`, {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
       headers: getAuthHeaders(),
     });
     return handleResponse<any>(response);
