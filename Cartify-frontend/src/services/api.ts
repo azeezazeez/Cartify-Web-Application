@@ -376,7 +376,7 @@ export const api = {
   },
 
   async updateUserProfile(profileData: any): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
+    const response = await fetch(`${BASE_URL}/auth/user/profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(profileData),
