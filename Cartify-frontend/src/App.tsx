@@ -43,10 +43,6 @@ function App() {
   const [isLookbookOpen, setIsLookbookOpen] = useState(false);
   const [isOrderConfirmationOpen, setIsOrderConfirmationOpen] = useState(false);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem('cartify_theme');
-    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
   const [isLoaded, setIsLoaded] = useState(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
