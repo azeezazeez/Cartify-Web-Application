@@ -54,9 +54,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isWishlistPage = location.pathname === '/wishlist';
   const isProfilePage = location.pathname === '/profile';
 
+  // 1.5 inches = approximately 144px (1 inch ≈ 96px in CSS)
+  const SCROLL_THRESHOLD = 144; // 1.5 inches in pixels
+
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > SCROLL_THRESHOLD);
 
       const heroSection =
         document.querySelector('[data-hero]') ||
@@ -202,8 +205,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Check if navbar should use dark text (black color)
+  // ✅ UPDATED: Check if navbar should use dark text (black color)
   const useDarkText =
+    isScrolled || // ✅ Added this condition - changes text to black after scrolling 1.5 inches
     isAdminDashboard ||
     isOrdersPage ||
     isSustainabilityPage ||
@@ -213,6 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   // Check if navbar should have white background
   const useWhiteBg =
+    isScrolled || // ✅ Also change background when scrolled
     isAdminDashboard ||
     isOrdersPage ||
     isSustainabilityPage ||
@@ -221,6 +226,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getTextColor = () => {
     if (
+      isScrolled || // ✅ Text turns black when scrolled
       isAdminDashboard ||
       isOrdersPage ||
       isSustainabilityPage ||
@@ -235,6 +241,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getLogoColor = () => {
     if (
+      isScrolled || // ✅ Logo turns black when scrolled
       isAdminDashboard ||
       isOrdersPage ||
       isSustainabilityPage ||
@@ -254,6 +261,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const getIconColor = () => {
     if (
+      isScrolled || // ✅ Icons turn black when scrolled
       isAdminDashboard ||
       isOrdersPage ||
       isSustainabilityPage ||
@@ -867,3 +875,5 @@ export const Navbar: React.FC<NavbarProps> = ({
     </nav>
   );
 };
+
+export default Navbar;
