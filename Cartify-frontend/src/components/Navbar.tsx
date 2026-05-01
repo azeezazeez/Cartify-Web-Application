@@ -18,8 +18,6 @@ interface NavbarProps {
   onAuthClick: () => void;
   onLogout: () => void;
   user: UserType | null;
-  isDark: boolean;
-  toggleTheme: () => void;
   showToast: (text: string, type?: 'success' | 'info') => void;
   onSearch: (query: string) => void;
   onShopClick: () => void;
@@ -33,8 +31,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   onAuthClick,
   onLogout,
   user,
-  isDark,
-  toggleTheme,
   showToast,
   onSearch,
   onShopClick
@@ -337,9 +333,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         'fixed top-0 left-0 right-0 z-50 px-4 sm:px-6',
         'h-16 sm:h-20 flex items-center',
         isScrolled && !useWhiteBg
-          ? (isDark ? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
+          ? (? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
           : useWhiteBg
-            ? (isDark ? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
+            ? (? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
             : 'bg-transparent',
         'overflow-visible shrink-0'
       )}
@@ -741,13 +737,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
 
                     <div className="flex items-center space-x-3">
-                      {isDark
-                        ? <Sun className="w-5 h-5 text-amber-400" />
-                        : <Moon className="w-5 h-5 text-brand-600" />
-                      }
-                      <span className="text-base font-medium">
-                        {isDark ? 'Light Mode' : 'Dark Mode'}
-                      </span>
+          
                     </div>
                     {/* Pill toggle */}
                     <div className={cn(
