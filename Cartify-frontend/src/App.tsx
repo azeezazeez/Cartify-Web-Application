@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion'; // ✅ Fixed import
 
+// Regular imports (non-lazy for critical components)
 import Profile from './pages/Profile';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -14,17 +15,31 @@ import { ToastContainer, ToastMessage } from './components/Toast';
 import { LookbookModal } from './components/LookbookModal';
 import { Footer } from './components/Footer';
 import { OrderConfirmationOverlay } from './components/OrderConfirmationOverlay';
-
-import { WishlistPage } from './pages/WishlistPage';
-import { SustainabilityPage } from './pages/SustainabilityPage';
-import { NewArrivalsPage } from './pages/NewArrivalsPage';
-import AdminDashboard from './pages/AdminDashboard';
-import { UserOrdersPage } from './pages/UserOrdersPage';
-
 import { api } from './services/api';
 import { Product, CartItem } from './types';
 
+// ✅ Lazy load non-critical pages
+const WishlistPage = lazy(() => import('./pages/WishlistPage'));
+const SustainabilityPage = lazy(() => import('./pages/SustainabilityPage'));
+const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const UserOrdersPage = lazy(() => import('./pages/UserOrdersPage'));
+
 const CartDrawer = React.memo(OriginalCartDrawer);
+
+// Loading component for Suspense fallback
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-white dark:bg-brand-950 flex items-center justify-center">
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="text-4xl font-serif font-bold tracking-tighter"
+    >
+      cartify
+    </motion.div>
+  </div>
+);
 
 function App() {
   const navigate = useNavigate();
@@ -51,8 +66,6 @@ function App() {
 
   const productGridRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const showToast = useCallback((text: string, type: 'success' | 'info' | 'error' = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -98,9 +111,37 @@ function App() {
     }
   }, [location.pathname, navigate, showToast]);
 
+  const transformCartItems = (items: any[]): CartItem[] =>
+    items.map((item: any) => ({
+      cartItemId: Number(item.cartItemId || 0),
+      userId: Number(item.userId || 0),
+      productId: String(item.productId || item.id || ''),
+      productName: String(item.productName || item.name || ''),
+      productPrice: Number(item.productPrice || item.price || 0),
+      productImage: String(item.productImage || item.image || ''),
+      quantity: Number(item.quantity || 1),
+      subtotal: Number(item.subtotal || 0),
+      id: String(item.productId || item.id || ''),
+      name: String(item.productName || item.name || ''),
+      price: Number(item.productPrice || item.price || 0),
+      image: String(item.productImage || item.image || ''),
+    }));
+
+  const transformCartResponse = (cartData: any) => {
+    const items = Array.isArray(cartData.items) ? transformCartItems(cartData.items) : [];
+    return {
+      items,
+      totalItems: typeof cartData.totalItems === 'number'
+        ? cartData.totalItems
+        : items.reduce((s, i) => s + i.quantity, 0),
+      totalAmount: typeof cartData.totalAmount === 'number'
+        ? cartData.totalAmount
+        : items.reduce((s, i) => s + i.subtotal, 0),
+    };
+  };
+
   const fetchData = useCallback(async () => {
     try {
-      fetch('https://cartify-web-application.onrender.com/api/products').catch(() => { });
       const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
       const productsResponse = await api.getProducts();
       setProducts(Array.isArray(productsResponse) ? productsResponse : []);
@@ -137,6 +178,10 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
 
   const handleLogout = () => {
@@ -159,7 +204,7 @@ function App() {
       return;
     }
 
-    // ✅ Close product modal if open (double safety)
+    // Close product modal if open
     if (selectedProduct) {
       setSelectedProduct(null);
     }
@@ -320,141 +365,117 @@ function App() {
     }
   };
 
-  const transformCartItems = (items: any[]): CartItem[] =>
-    items.map((item: any) => ({
-      cartItemId: Number(item.cartItemId || 0),
-      userId: Number(item.userId || 0),
-      productId: String(item.productId || item.id || ''),
-      productName: String(item.productName || item.name || ''),
-      productPrice: Number(item.productPrice || item.price || 0),
-      productImage: String(item.productImage || item.image || ''),
-      quantity: Number(item.quantity || 1),
-      subtotal: Number(item.subtotal || 0),
-      id: String(item.productId || item.id || ''),
-      name: String(item.productName || item.name || ''),
-      price: Number(item.productPrice || item.price || 0),
-      image: String(item.productImage || item.image || ''),
-    }));
-
-  const transformCartResponse = (cartData: any) => {
-    const items = Array.isArray(cartData.items) ? transformCartItems(cartData.items) : [];
-    return {
-      items,
-      totalItems: typeof cartData.totalItems === 'number'
-        ? cartData.totalItems
-        : items.reduce((s, i) => s + i.quantity, 0),
-      totalAmount: typeof cartData.totalAmount === 'number'
-        ? cartData.totalAmount
-        : items.reduce((s, i) => s + i.subtotal, 0),
-    };
-  };
-
   if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-brand-950 flex items-center justify-center">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-4xl font-serif font-bold tracking-tighter"
-        >
-          cartify
-        </motion.div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
     <div className="min-h-screen bg-white dark:bg-brand-950 font-sans">
       <Navbar
-  cartCount={memoizedCartCount}
-  wishlistCount={wishlist.length}
-  onCartClick={() => setIsCartOpen(true)}
-  onWishlistClick={() => navigate('/wishlist')}
-  onAuthClick={() => setIsAuthOpen(true)}
-  onLogout={handleLogout}
-  user={user}
-  showToast={showToast}
-  onSearch={setSearchQuery}
-  onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
-        />
+        cartCount={memoizedCartCount}
+        wishlistCount={wishlist.length}
+        onCartClick={() => setIsCartOpen(true)}
+        onWishlistClick={() => navigate('/wishlist')}
+        onAuthClick={() => setIsAuthOpen(true)}
+        onLogout={handleLogout}
+        user={user}
+        showToast={showToast}
+        onSearch={setSearchQuery}
+        onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
+      />
 
-      <Routes>
-        <Route path="/" element={
-          <>
-            <Hero
-              showToast={showToast}
-              onLookbookClick={() => setIsLookbookOpen(true)}
-              onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            />
-            <div ref={productGridRef}>
-              <ProductGrid
-                products={products}
-                onAddToCart={addToCart}
-                onProductClick={(product) => setSelectedProduct(product)}
+      <Suspense fallback={<LoadingSpinner />}>
+        <Routes>
+          <Route path="/" element={
+            <>
+              <Hero
                 showToast={showToast}
-                searchQuery={searchQuery}
-                sortBy={sortBy}
-                onSortChange={setSortBy}
-                wishlist={wishlist}
-                onToggleWishlist={toggleWishlist}
-                showOnlyWishlist={false}
+                onLookbookClick={() => setIsLookbookOpen(true)}
+                onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
               />
-            </div>
-          </>
-        } />
-
-        <Route path="/profile" element={
-          user ? <Profile user={user} onLogout={handleLogout} showToast={showToast} />
-            : <Navigate to="/" replace />
-        } />
-
-        <Route path="/my-orders" element={<UserOrdersPage />} />
-
-        <Route path="/wishlist" element={
-          <WishlistPage
-            wishlist={wishlist}
-            onAddToCart={addToCart}
-            onProductClick={(product) => setSelectedProduct(product)}
-            onToggleWishlist={toggleWishlist}
-          />
-        } />
-
-        <Route path="/sustainability" element={<SustainabilityPage />} />
-
-        <Route path="/new-arrivals" element={
-          <NewArrivalsPage
-            products={products}
-            onAddToCart={addToCart}
-            onProductClick={(product) => setSelectedProduct(product)}
-            wishlist={wishlist}
-            onToggleWishlist={toggleWishlist}
-          />
-        } />
-
-        <Route path="/admin" element={
-          user?.role === 'ADMIN'
-            ? <AdminDashboard user={user} onLogout={handleLogout} />
-            : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-                <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
-                <button onClick={() => navigate('/')}
-                  className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                  Go Home
-                </button>
+              <div ref={productGridRef}>
+                <ProductGrid
+                  products={products}
+                  onAddToCart={addToCart}
+                  onProductClick={(product) => setSelectedProduct(product)}
+                  showToast={showToast}
+                  searchQuery={searchQuery}
+                  sortBy={sortBy}
+                  onSortChange={setSortBy}
+                  wishlist={wishlist}
+                  onToggleWishlist={toggleWishlist}
+                  showOnlyWishlist={false}
+                />
               </div>
-            </motion.div>
-        } />
+            </>
+          } />
 
-        <Route path="/admin/orders" element={user?.role === 'ADMIN' ? <div>Orders Management</div> : <Navigate to="/" replace />} />
-        <Route path="/admin/products" element={user?.role === 'ADMIN' ? <div>Products Management</div> : <Navigate to="/" replace />} />
-        <Route path="/admin/customers" element={user?.role === 'ADMIN' ? <div>Customers Management</div> : <Navigate to="/" replace />} />
+          <Route path="/profile" element={
+            user ? <Profile user={user} onLogout={handleLogout} showToast={showToast} />
+              : <Navigate to="/" replace />
+          } />
 
-        {/* Catch all route - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="/my-orders" element={<UserOrdersPage />} />
+
+          <Route path="/wishlist" element={
+            <WishlistPage
+              wishlist={wishlist}
+              onAddToCart={addToCart}
+              onProductClick={(product) => setSelectedProduct(product)}
+              onToggleWishlist={toggleWishlist}
+            />
+          } />
+
+          <Route path="/sustainability" element={<SustainabilityPage />} />
+
+          <Route path="/new-arrivals" element={
+            <NewArrivalsPage
+              products={products}
+              onAddToCart={addToCart}
+              onProductClick={(product) => setSelectedProduct(product)}
+              wishlist={wishlist}
+              onToggleWishlist={toggleWishlist}
+            />
+          } />
+
+          <Route path="/admin" element={
+            user?.role === 'ADMIN'
+              ? <AdminDashboard user={user} onLogout={handleLogout} />
+              : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                  <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+                  <button onClick={() => navigate('/')}
+                    className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+                    Go Home
+                  </button>
+                </div>
+              </motion.div>
+          } />
+
+          <Route path="/admin/orders" element={
+            user?.role === 'ADMIN' 
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+              : <Navigate to="/" replace />
+          } />
+          
+          <Route path="/admin/products" element={
+            user?.role === 'ADMIN' 
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+              : <Navigate to="/" replace />
+          } />
+          
+          <Route path="/admin/customers" element={
+            user?.role === 'ADMIN' 
+              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense> 
+              : <Navigate to="/" replace />
+          } />
+
+          {/* Catch all route - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
 
       <Footer
         showToast={showToast}
@@ -468,7 +489,7 @@ function App() {
         onUpdateQuantity={updateQuantity}
         onRemove={removeFromCart}
         onCheckout={handleCheckout}
-        isSyncing={false}
+        isSyncing={isCartSyncing}
       />
 
       <ProductModal
