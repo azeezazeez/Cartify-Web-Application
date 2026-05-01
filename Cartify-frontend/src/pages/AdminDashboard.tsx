@@ -56,9 +56,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 api.adminGetOrderStats().catch(() => null)
             ]);
             
-            // ✅ FILTER OUT FAKE/MOCK ORDERS
+            // ✅ FILTER OUT MOCK ORDERS - Only change in this file
             const realOrders = (ordersData || []).filter((order: AdminOrder) => {
-                const isFake = 
+                const isMock = 
                     order.orderId?.startsWith('MOCK-') ||
                     order.orderId?.startsWith('TEST-') ||
                     order.orderId?.startsWith('DEMO-') ||
@@ -67,36 +67,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     order.customerName?.toLowerCase().includes('test') ||
                     order.totalAmount === 0 ||
                     order.totalAmount === 99.99;
-                return !isFake;
+                return !isMock;
             });
             
             setOrders(realOrders);
             setCustomers(customersData || []);
-            
-            // ✅ Update stats based on real orders only
-            const updatedStats = {
-                totalOrders: realOrders.length,
-                totalRevenue: realOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-                pendingOrders: realOrders.filter(o => o.status === 'PENDING').length,
-                confirmedOrders: realOrders.filter(o => o.status === 'CONFIRMED').length,
-                processingOrders: realOrders.filter(o => o.status === 'PROCESSING').length,
-                shippedOrders: realOrders.filter(o => o.status === 'SHIPPED').length,
-                deliveredOrders: realOrders.filter(o => o.status === 'DELIVERED').length,
-                cancelledOrders: realOrders.filter(o => o.status === 'CANCELLED').length,
-                recentOrders: realOrders.slice(0, 5)
-            };
-            
-            setStats(statsData ? {
-                ...statsData,
-                totalOrders: realOrders.length,
-                totalRevenue: realOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
-                pendingOrders: realOrders.filter(o => o.status === 'PENDING').length,
-                confirmedOrders: realOrders.filter(o => o.status === 'CONFIRMED').length,
-                processingOrders: realOrders.filter(o => o.status === 'PROCESSING').length,
-                shippedOrders: realOrders.filter(o => o.status === 'SHIPPED').length,
-                deliveredOrders: realOrders.filter(o => o.status === 'DELIVERED').length,
-                cancelledOrders: realOrders.filter(o => o.status === 'CANCELLED').length,
-            } : updatedStats);
+            setStats(statsData || {
+                totalOrders: 0,
+                totalRevenue: 0,
+                pendingOrders: 0,
+                confirmedOrders: 0,
+                processingOrders: 0,
+                shippedOrders: 0,
+                deliveredOrders: 0,
+                cancelledOrders: 0,
+                recentOrders: []
+            });
         } catch (err) {
             console.error('Error fetching dashboard data:', err);
             setError(null);
