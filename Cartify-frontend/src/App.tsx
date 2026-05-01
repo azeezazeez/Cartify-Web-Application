@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 
-// Regular imports (non-lazy for critical components)
 import Profile from './pages/Profile';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -15,31 +14,17 @@ import { ToastContainer, ToastMessage } from './components/Toast';
 import { LookbookModal } from './components/LookbookModal';
 import { Footer } from './components/Footer';
 import { OrderConfirmationOverlay } from './components/OrderConfirmationOverlay';
+
+import { WishlistPage } from './pages/WishlistPage';
+import { SustainabilityPage } from './pages/SustainabilityPage';
+import { NewArrivalsPage } from './pages/NewArrivalsPage';
+import AdminDashboard from './pages/AdminDashboard';
+import { UserOrdersPage } from './pages/UserOrdersPage';
+
 import { api } from './services/api';
 import { Product, CartItem } from './types';
 
-// Lazy load non-critical pages
-const WishlistPage = lazy(() => import('./pages/WishlistPage'));
-const SustainabilityPage = lazy(() => import('./pages/SustainabilityPage'));
-const NewArrivalsPage = lazy(() => import('./pages/NewArrivalsPage'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const UserOrdersPage = lazy(() => import('./pages/UserOrdersPage'));
-
 const CartDrawer = React.memo(OriginalCartDrawer);
-
-// Loading component
-const LoadingSpinner = () => (
-  <div className="min-h-screen bg-white flex items-center justify-center">
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="text-4xl font-serif font-bold tracking-tighter"
-    >
-      cartify
-    </motion.div>
-  </div>
-);
 
 function App() {
   const navigate = useNavigate();
@@ -58,10 +43,15 @@ function App() {
   const [isLookbookOpen, setIsLookbookOpen] = useState(false);
   const [isOrderConfirmationOpen, setIsOrderConfirmationOpen] = useState(false);
   const [lastOrderDetails, setLastOrderDetails] = useState<any>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('cartify_theme');
+    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+  const [isLoaded, setIsLoaded] = useState(true);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Featured');
+  const [isCartSyncing, setIsCartSyncing] = useState(false);
 
   const productGridRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -74,107 +64,18 @@ function App() {
 
   const removeToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
-  // Memoize cart values
+  // Memoize cart items
   const memoizedCartItems = useMemo(() => cart.items, [cart.items]);
   const memoizedCartTotal = useMemo(() => cart.totalAmount, [cart.totalAmount]);
   const memoizedCartCount = useMemo(() => cart.totalItems, [cart.totalItems]);
-
-  // Transform functions
-  const transformCartItems = useCallback((items: any[]): CartItem[] =>
-    items.map((item: any) => ({
-      cartItemId: Number(item.cartItemId || 0),
-      userId: Number(item.userId || 0),
-      productId: String(item.productId || item.id || ''),
-      productName: String(item.productName || item.name || ''),
-      productPrice: Number(item.productPrice || item.price || 0),
-      productImage: String(item.productImage || item.image || ''),
-      quantity: Number(item.quantity || 1),
-      subtotal: Number(item.subtotal || 0),
-      id: String(item.productId || item.id || ''),
-      name: String(item.productName || item.name || ''),
-      price: Number(item.productPrice || item.price || 0),
-      image: String(item.productImage || item.image || ''),
-    })), []);
-
-  const transformCartResponse = useCallback((cartData: any) => {
-    const items = Array.isArray(cartData.items) ? transformCartItems(cartData.items) : [];
-    return {
-      items,
-      totalItems: typeof cartData.totalItems === 'number'
-        ? cartData.totalItems
-        : items.reduce((s, i) => s + i.quantity, 0),
-      totalAmount: typeof cartData.totalAmount === 'number'
-        ? cartData.totalAmount
-        : items.reduce((s, i) => s + i.subtotal, 0),
-    };
-  }, [transformCartItems]);
-
-  // Fetch data from API
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoaded(false);
-      const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
-
-      console.log('Fetching products from API...');
-      const productsResponse = await api.getProducts();
-
-      if (Array.isArray(productsResponse) && productsResponse.length > 0) {
-        setProducts(productsResponse);
-        console.log(`✅ Loaded ${productsResponse.length} products from API`);
-      } else {
-        console.warn('⚠️ API returned empty products array');
-        setProducts([]);
-        showToast('No products found in the database', 'info');
-      }
-
-      if (isLoggedIn) {
-        try {
-          const cartResponse = await api.getCart();
-          if (cartResponse && typeof cartResponse === 'object') {
-            const transformed = transformCartResponse(cartResponse);
-            setCart(transformed);
-          }
-        } catch (cartError: any) {
-          console.error('Cart fetch error:', cartError);
-          if (cartError?.message?.includes('401')) {
-            localStorage.removeItem('cartify_currentUser');
-            setUser(null);
-          }
-          setCart({ items: [], totalItems: 0, totalAmount: 0 });
-        }
-
-        try {
-          // api.getWishlist() now returns properly normalized Product[]
-          const wishlistResponse = await api.getWishlist();
-          setWishlist(Array.isArray(wishlistResponse) ? wishlistResponse : []);
-        } catch (wishlistError) {
-          console.error('Wishlist fetch error:', wishlistError);
-          setWishlist([]);
-        }
-      } else {
-        setCart({ items: [], totalItems: 0, totalAmount: 0 });
-        setWishlist([]);
-      }
-    } catch (error: any) {
-      console.error('❌ Failed to fetch data:', error);
-      setProducts([]);
-      showToast(`Failed to load products: ${error.message || 'API connection error'}`, 'error');
-    } finally {
-      setIsLoaded(true);
-    }
-  }, [transformCartResponse, showToast]);
 
   // Sync user from localStorage
   useEffect(() => {
     const checkUser = () => {
       const userStr = localStorage.getItem('cartify_currentUser');
       if (userStr) {
-        try {
-          const userData = JSON.parse(userStr);
-          setUser(userData);
-        } catch {
-          setUser(null);
-        }
+        try { setUser(JSON.parse(userStr)); }
+        catch { setUser(null); }
       } else {
         setUser(null);
       }
@@ -184,17 +85,13 @@ function App() {
     return () => window.removeEventListener('storage', checkUser);
   }, []);
 
-  // Initial data fetch
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   // Admin redirect on initial load
   useEffect(() => {
     const userStr = localStorage.getItem('cartify_currentUser');
     if (userStr) {
       try {
         const userData = JSON.parse(userStr);
+        setUser(userData);
         if (userData.role === 'ADMIN' && location.pathname === '/') {
           navigate('/admin');
           showToast('Welcome to Admin Dashboard!', 'success');
@@ -203,10 +100,54 @@ function App() {
     }
   }, [location.pathname, navigate, showToast]);
 
-  // Scroll to top on route change
+  const fetchData = useCallback(async () => {
+    try {
+      fetch('https://cartify-web-application.onrender.com/api/products').catch(() => { });
+
+      const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
+      const productsResponse = await api.getProducts();
+      setProducts(Array.isArray(productsResponse) ? productsResponse : []);
+
+      if (isLoggedIn) {
+        try {
+          const cartResponse = await api.getCart();
+          if (cartResponse && typeof cartResponse === 'object') {
+            const transformed = transformCartResponse(cartResponse as any);
+            setCart(transformed);
+          }
+        } catch (cartError: any) {
+          if (cartError?.message?.includes('401')) {
+            localStorage.removeItem('cartify_currentUser');
+            setUser(null);
+          }
+          setCart({ items: [], totalItems: 0, totalAmount: 0 });
+        }
+
+        try {
+          const wishlistResponse = await api.getWishlist();
+          setWishlist(Array.isArray(wishlistResponse) ? wishlistResponse : []);
+        } catch {
+          setWishlist([]);
+        }
+      } else {
+        setCart({ items: [], totalItems: 0, totalAmount: 0 });
+        setWishlist([]);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [location.pathname]);
+    document.documentElement.classList.toggle('dark', isDark);
+    localStorage.setItem('cartify_theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
+  useEffect(() => { window.scrollTo(0, 0); }, [location.pathname]);
 
   const handleLogout = () => {
     api.logout();
@@ -217,6 +158,7 @@ function App() {
     navigate('/');
   };
 
+  // INSTANT ADD TO CART - NO DELAYS
   const addToCart = async (product: Product) => {
     if (!product?.id) return;
 
@@ -227,13 +169,13 @@ function App() {
       return;
     }
 
+    // ✅ Close product modal if open (double safety)
     if (selectedProduct) {
       setSelectedProduct(null);
     }
 
     setIsCartOpen(true);
 
-    // Optimistic update
     setCart(prevCart => {
       const existingItemIndex = prevCart.items.findIndex(i => (i.productId || i.id) === product.id);
 
@@ -246,6 +188,7 @@ function App() {
           quantity: newQuantity,
           subtotal: newQuantity * (existingItem.productPrice || existingItem.price || 0),
         };
+
         return {
           items: updatedItems,
           totalItems: prevCart.totalItems + 1,
@@ -266,6 +209,7 @@ function App() {
           price: product.price,
           image: product.image,
         };
+
         return {
           items: [...prevCart.items, newItem],
           totalItems: prevCart.totalItems + 1,
@@ -276,16 +220,14 @@ function App() {
 
     showToast(`${product.name} added to cart!`, 'success');
 
-    // Background sync with API
     try {
       await api.addToCart(product.id, 1);
       const updatedCart = await api.getCart();
       if (updatedCart && typeof updatedCart === 'object') {
-        setCart(transformCartResponse(updatedCart));
+        setCart(transformCartResponse(updatedCart as any));
       }
     } catch (error: any) {
       console.error('Background sync error:', error);
-      showToast('Cart saved locally, will sync when online', 'info');
     }
   };
 
@@ -312,7 +254,7 @@ function App() {
     try {
       await api.updateCartQuantity(productId, newQuantity);
     } catch (error: any) {
-      console.error('Update quantity error:', error);
+      console.error('Background sync error:', error);
     }
   };
 
@@ -329,7 +271,16 @@ function App() {
     try {
       await api.removeFromCart(productId);
     } catch (error: any) {
-      console.error('Remove from cart error:', error);
+      console.error('Background sync error:', error);
+    }
+  };
+
+  const clearCart = async () => {
+    setCart({ items: [], totalItems: 0, totalAmount: 0 });
+    try {
+      await api.clearCart();
+    } catch (error: any) {
+      console.error('Background sync error:', error);
     }
   };
 
@@ -343,25 +294,23 @@ function App() {
 
     const isCurrentlyWishlisted = wishlist.some(p => p.id === product.id);
 
-    // Optimistic update
     if (isCurrentlyWishlisted) {
       setWishlist(prev => prev.filter(p => p.id !== product.id));
       showToast(`${product.name} removed from wishlist`, 'info');
     } else {
       setWishlist(prev => [...prev, product]);
-      showToast(`${product.name} added to wishlist!`, 'success');
+      showToast(`${product.name} added to wishlist`, 'success');
     }
 
     try {
       await api.toggleWishlist(product.id);
     } catch (error: any) {
-      // Revert on error
       if (isCurrentlyWishlisted) {
         setWishlist(prev => [...prev, product]);
       } else {
         setWishlist(prev => prev.filter(p => p.id !== product.id));
       }
-      showToast(error?.message || 'Failed to update wishlist', 'error');
+      showToast(error?.message || 'Failed to update wishlist', 'info');
     }
   };
 
@@ -377,16 +326,56 @@ function App() {
       setIsPaymentOpen(false);
       setIsOrderConfirmationOpen(true);
     } catch (error: any) {
-      showToast(error?.message || 'Failed to process order', 'error');
+      showToast(error?.message || 'Failed to process order', 'info');
     }
   };
 
+  const transformCartItems = (items: any[]): CartItem[] =>
+    items.map((item: any) => ({
+      cartItemId: Number(item.cartItemId || 0),
+      userId: Number(item.userId || 0),
+      productId: String(item.productId || item.id || ''),
+      productName: String(item.productName || item.name || ''),
+      productPrice: Number(item.productPrice || item.price || 0),
+      productImage: String(item.productImage || item.image || ''),
+      quantity: Number(item.quantity || 1),
+      subtotal: Number(item.subtotal || 0),
+      id: String(item.productId || item.id || ''),
+      name: String(item.productName || item.name || ''),
+      price: Number(item.productPrice || item.price || 0),
+      image: String(item.productImage || item.image || ''),
+    }));
+
+  const transformCartResponse = (cartData: any) => {
+    const items = Array.isArray(cartData.items) ? transformCartItems(cartData.items) : [];
+    return {
+      items,
+      totalItems: typeof cartData.totalItems === 'number'
+        ? cartData.totalItems
+        : items.reduce((s, i) => s + i.quantity, 0),
+      totalAmount: typeof cartData.totalAmount === 'number'
+        ? cartData.totalAmount
+        : items.reduce((s, i) => s + i.subtotal, 0),
+    };
+  };
+
   if (!isLoaded) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-white dark:bg-brand-950 flex items-center justify-center">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-4xl font-serif font-bold tracking-tighter"
+        >
+          cartify
+        </motion.div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-white dark:bg-brand-950 font-sans">
       <Navbar
         cartCount={memoizedCartCount}
         wishlistCount={wishlist.length}
@@ -395,102 +384,89 @@ function App() {
         onAuthClick={() => setIsAuthOpen(true)}
         onLogout={handleLogout}
         user={user}
+        isDark={isDark}
+        toggleTheme={() => setIsDark(!isDark)}
         showToast={showToast}
         onSearch={setSearchQuery}
         onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
       />
 
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          <Route path="/" element={
-            <>
-              <Hero
+      <Routes>
+        <Route path="/" element={
+          <>
+            <Hero
+              showToast={showToast}
+              onLookbookClick={() => setIsLookbookOpen(true)}
+              onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            />
+            <div ref={productGridRef}>
+              <ProductGrid
+                products={products}
+                onAddToCart={addToCart}
+                onProductClick={(product) => setSelectedProduct(product)}
                 showToast={showToast}
-                onLookbookClick={() => setIsLookbookOpen(true)}
-                onShopClick={() => productGridRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                searchQuery={searchQuery}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                wishlist={wishlist}
+                onToggleWishlist={toggleWishlist}
+                showOnlyWishlist={false}
               />
-              <div ref={productGridRef}>
-                <ProductGrid
-                  products={products}
-                  onAddToCart={addToCart}
-                  onProductClick={(product) => setSelectedProduct(product)}
-                  showToast={showToast}
-                  searchQuery={searchQuery}
-                  sortBy={sortBy}
-                  onSortChange={setSortBy}
-                  wishlist={wishlist}
-                  onToggleWishlist={toggleWishlist}
-                  showOnlyWishlist={false}
-                />
+            </div>
+          </>
+        } />
+
+        <Route path="/profile" element={
+          user ? <Profile user={user} onLogout={handleLogout} showToast={showToast} />
+            : <Navigate to="/" replace />
+        } />
+
+        <Route path="/my-orders" element={<UserOrdersPage isDark={isDark} />} />
+
+        <Route path="/wishlist" element={
+          <WishlistPage
+            wishlist={wishlist}
+            onAddToCart={addToCart}
+            onProductClick={(product) => setSelectedProduct(product)}
+            onToggleWishlist={toggleWishlist}
+          />
+        } />
+
+        <Route path="/sustainability" element={<SustainabilityPage />} />
+
+        <Route path="/new-arrivals" element={
+          <NewArrivalsPage
+            products={products}
+            onAddToCart={addToCart}
+            onProductClick={(product) => setSelectedProduct(product)}
+            wishlist={wishlist}
+            onToggleWishlist={toggleWishlist}
+          />
+        } />
+
+        <Route path="/admin" element={
+          user?.role === 'ADMIN'
+            ? <AdminDashboard user={user} onLogout={handleLogout} />
+            : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+                <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+                <button onClick={() => navigate('/')}
+                  className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
+                  Go Home
+                </button>
               </div>
-            </>
-          } />
+            </motion.div>
+        } />
 
-          <Route path="/profile" element={
-            user ? <Profile user={user} onLogout={handleLogout} showToast={showToast} />
-              : <Navigate to="/" replace />
-          } />
+        <Route path="/admin/orders" element={user?.role === 'ADMIN' ? <div>Orders Management</div> : <Navigate to="/" replace />} />
+        <Route path="/admin/products" element={user?.role === 'ADMIN' ? <div>Products Management</div> : <Navigate to="/" replace />} />
+        <Route path="/admin/customers" element={user?.role === 'ADMIN' ? <div>Customers Management</div> : <Navigate to="/" replace />} />
 
-          <Route path="/my-orders" element={<UserOrdersPage />} />
-
-          <Route path="/wishlist" element={
-            <WishlistPage
-              wishlist={wishlist}
-              onAddToCart={addToCart}
-              onProductClick={(product) => setSelectedProduct(product)}
-              onToggleWishlist={toggleWishlist}
-            />
-          } />
-
-          <Route path="/sustainability" element={<SustainabilityPage />} />
-
-          <Route path="/new-arrivals" element={
-            <NewArrivalsPage
-              products={products}
-              onAddToCart={addToCart}
-              onProductClick={(product) => setSelectedProduct(product)}
-              wishlist={wishlist}
-              onToggleWishlist={toggleWishlist}
-            />
-          } />
-
-          <Route path="/admin" element={
-            user?.role === 'ADMIN'
-              ? <AdminDashboard user={user} onLogout={handleLogout} />
-              : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
-                  <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
-                  <button onClick={() => navigate('/')}
-                    className="px-6 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">
-                    Go Home
-                  </button>
-                </div>
-              </motion.div>
-          } />
-
-          <Route path="/admin/orders" element={
-            user?.role === 'ADMIN'
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
-              : <Navigate to="/" replace />
-          } />
-
-          <Route path="/admin/products" element={
-            user?.role === 'ADMIN'
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
-              : <Navigate to="/" replace />
-          } />
-
-          <Route path="/admin/customers" element={
-            user?.role === 'ADMIN'
-              ? <Suspense fallback={<LoadingSpinner />}><AdminDashboard user={user} onLogout={handleLogout} /></Suspense>
-              : <Navigate to="/" replace />
-          } />
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
+        {/* Catch all route - redirect to home */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <Footer
         showToast={showToast}
