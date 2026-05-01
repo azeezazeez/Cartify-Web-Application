@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Search, Menu, X, User, Heart, Package } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, User, Heart, Package, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -18,6 +18,8 @@ interface NavbarProps {
   onAuthClick: () => void;
   onLogout: () => void;
   user: UserType | null;
+  isDark: boolean;
+  toggleTheme: () => void;
   showToast: (text: string, type?: 'success' | 'info') => void;
   onSearch: (query: string) => void;
   onShopClick: () => void;
@@ -31,6 +33,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onAuthClick,
   onLogout,
   user,
+  isDark,
+  toggleTheme,
   showToast,
   onSearch,
   onShopClick
@@ -54,16 +58,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isWishlistPage = location.pathname === '/wishlist';
   const isProfilePage = location.pathname === '/profile';
 
-   useEffect(() => {
-    const handleScroll = () => {
-      const scrolled = window.scrollY > 120;
-      setIsScrolled(scrolled);
-      setIsPastProductsSection(scrolled);
-    };
-    window.addEventListener('scroll', handleScroll);
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+ useEffect(() => {
+  const handleScroll = () => {
+    const scrolled = window.scrollY > 100; // ✅ 1 inch
+    setIsScrolled(scrolled);
+    setIsPastProductsSection(scrolled); // override old logic
+  };
+
+  window.addEventListener('scroll', handleScroll);
+  handleScroll();
+
+  return () => window.removeEventListener('scroll', handleScroll);
+}, []);
 
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
@@ -186,20 +192,29 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  // Check if navbar should use dark text (black color)
   const useDarkText = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage || isPastProductsSection;
 
+  // Check if navbar should have white background
   const useWhiteBg = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage;
 
-   const getTextColor = () => {
-    return isScrolled ? 'text-gray-900' : 'text-white';
-  };
+  const getTextColor = () => {
+  return isScrolled ? 'text-gray-900' : 'text-white';
+};
 
   const getLogoColor = () => {
-    return isScrolled ? 'text-gray-900' : 'text-white';
+    if (isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage) {
+      return isDark ? 'text-white' : 'text-gray-900';
+    }
+    if (isPastProductsSection) {
+      return isDark ? 'text-white' : 'text-gray-900';
+    }
+    return 'text-white';
   };
 
   const getButtonHoverColor = () => {
-    return isScrolled ? 'hover:bg-gray-100' : 'hover:bg-white/20';
+    if (useDarkText) return isDark ? 'hover:bg-brand-800' : 'hover:bg-gray-100';
+    return 'hover:bg-white/20';
   };
 
   const getIconColor = () => {
@@ -212,20 +227,26 @@ export const Navbar: React.FC<NavbarProps> = ({
     return 'text-white';
   };
 
-   const getSearchBgColor = () => {
-    return isScrolled ? 'bg-gray-100' : 'bg-white/20';
+  const getSearchBgColor = () => {
+    if (useDarkText) return isDark ? 'bg-brand-800' : 'bg-gray-100';
+    return 'bg-white/20';
   };
 
   const getSearchTextColor = () => {
-    return isScrolled ? 'text-gray-900' : 'text-white';
+    if (useDarkText) return isDark ? 'text-white' : 'text-gray-900';
+    return 'text-white';
   };
 
   const getSearchPlaceholderColor = () => {
-    return isScrolled ? 'placeholder-gray-500' : 'placeholder-white/70';
+    if (useDarkText) return isDark ? 'placeholder-brand-400' : 'placeholder-gray-500';
+    return 'placeholder-white/70';
   };
 
   const textColor = getTextColor();
   const logoColor = getLogoColor();
+  const hoverColor = useDarkText
+    ? (isDark ? 'hover:text-brand-400' : 'hover:text-gray-600')
+    : 'hover:text-white/80';
   const buttonBgHover = getButtonHoverColor();
   const searchBgColor = getSearchBgColor();
   const searchTextColor = getSearchTextColor();
@@ -233,8 +254,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const iconColor = getIconColor();
 
   const getToggleButtonColor = () => {
-  return isScrolled ? 'text-gray-900' : 'text-white';
-};
+    if (isMobileMenuOpen) return isDark ? 'text-white' : 'text-gray-900';
+    if (useDarkText) return isDark ? 'text-white' : 'text-gray-900';
+    return 'text-white';
+  };
 
   // Function to get user initials from profile settings
   const getUserInitials = () => {
@@ -307,15 +330,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   const mobileUserBg = 'bg-gray-50 dark:bg-brand-800';
   const mobileCloseBtn = 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-brand-800';
 
-    return (
+  return (
     <nav
       ref={navbarRef}
       className={cn(
         'fixed top-0 left-0 right-0 z-50 px-4 sm:px-6',
         'h-16 sm:h-20 flex items-center',
-        isScrolled || isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage
-          ? 'bg-white shadow-md'
-          : 'bg-transparent',
+        isScrolled && !useWhiteBg
+          ? (isDark ? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
+          : useWhiteBg
+            ? (isDark ? 'bg-brand-950 shadow-md' : 'bg-white shadow-md')
+            : 'bg-transparent',
         'overflow-visible shrink-0'
       )}
     >
@@ -552,6 +577,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </AnimatePresence>
           </div>
 
+          {/* Theme toggle — desktop */}
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+          >
+            {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
+          </button>
+
           {/* Cart button */}
           <button
             onClick={onCartClick}
@@ -715,10 +749,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span className="text-base font-medium">Search</span>
                   </div>
 
+                  {/* Theme toggle — mobile */}
+                  <div
+                    onClick={toggleTheme}
+                    className={cn("flex items-center justify-between py-3 px-4 -mx-4 rounded-lg transition-colors cursor-pointer", mobileText, mobileHover)}
+                  >
                     <div className="flex items-center space-x-3">
-          
+                      {isDark
+                        ? <Sun className="w-5 h-5 text-amber-400" />
+                        : <Moon className="w-5 h-5 text-brand-600" />
+                      }
+                      <span className="text-base font-medium">
+                        {isDark ? 'Light Mode' : 'Dark Mode'}
+                      </span>
                     </div>
-              
+                    {/* Pill toggle */}
+                    <div className={cn(
+                      "w-11 h-6 rounded-full relative transition-colors duration-300 flex-shrink-0",
+                      isDark ? "bg-brand-600" : "bg-gray-300"
+                    )}>
+                      <motion.div
+                        layout
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        className={cn(
+                          "absolute top-0.5 w-5 h-5 rounded-full shadow-md",
+                          isDark ? "bg-white right-0.5" : "bg-white left-0.5"
+                        )}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
