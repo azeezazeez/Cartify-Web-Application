@@ -369,6 +369,10 @@ export const api = {
 
 
   async getUserProfile(): Promise<any> {
+     try {
+    await fetch(`${BASE_URL}/products`); // lightweight public endpoint
+  } catch (_) {}
+    
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       headers: getAuthHeaders(),
     });
