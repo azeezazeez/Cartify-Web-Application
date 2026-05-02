@@ -28,22 +28,22 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-    @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getServletPath();
-        String method = request.getMethod();
+  @Override
+protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getServletPath();
+    String method = request.getMethod();
 
-        // Skip filter for OPTIONS preflight
-        if ("OPTIONS".equalsIgnoreCase(method)) return true;
-
-        // Skip filter for all public paths
-        return path.startsWith("/api/auth/") ||
-               path.equals("/api/auth") ||
-               path.startsWith("/api/products") ||
-               path.startsWith("/api/public") ||
-               path.startsWith("/api/debug") ||
-               path.startsWith("/h2-console");
-    }
+    if ("OPTIONS".equalsIgnoreCase(method)) return true;
+    
+    return path.equals("/api/auth/login") ||
+           path.equals("/api/auth/register") ||
+           path.equals("/api/auth/forgot-password/generate-otp") ||
+           path.equals("/api/auth/forgot-password/reset") ||
+           path.startsWith("/api/products") ||
+           path.startsWith("/api/public") ||
+           path.startsWith("/api/debug") ||
+           path.startsWith("/h2-console");
+}
 
     @Override
     protected void doFilterInternal(
