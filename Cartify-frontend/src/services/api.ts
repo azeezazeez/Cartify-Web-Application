@@ -275,13 +275,7 @@ export const api = {
 
       if (addResponse.ok) {
         return { isWishlisted: true };
-      }
-
-      if (addResponse.status === 409) {
-        const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        });
+      };
 
         if (removeResponse.ok) {
           return { isWishlisted: false };
