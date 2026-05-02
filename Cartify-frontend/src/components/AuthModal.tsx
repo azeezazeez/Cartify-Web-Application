@@ -25,6 +25,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
     confirmNewPassword: ''
   });
 
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      otp: '',
+      newPassword: '',
+      confirmNewPassword: ''
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -33,71 +45,45 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
       if (mode === 'register') {
         if (formData.password !== formData.confirmPassword) {
           showToast?.('Passwords do not match', 'error');
-          setIsLoading(false);
           return;
         }
 
-        // ✅ REMOVED: console.log leaking password in plain text
-        const userData = {
+        // ✅ api.register() throws on any error (409 conflict, 400 bad request etc.)
+        // No need to check response — success = no throw, failure = catch block
+        await api.register({
           email: formData.email,
           password: formData.password,
           username: formData.name,
           role: 'USER'
-        };
+        });
 
-        const response = await api.register(userData);
-        // ✅ REMOVED: console.log('Registration response') - may contain sensitive data
-
-        if (response?.success || response?.data || response?.user || response?.id) {
-          showToast?.('Registration successful! You can now sign in.', 'success');
-          setFormData(prev => ({
-            ...prev,
-            password: '',
-            confirmPassword: ''
-          }));
-          setMode('login');
-        } else {
-          const errorMessage = response?.message || response?.error || 'Registration failed';
-          showToast?.(errorMessage, 'error');
-        }
+        showToast?.('Registration successful! You can now sign in.', 'success');
+        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }));
+        setMode('login');
 
       } else if (mode === 'login') {
         if (!formData.email || !formData.password) {
           showToast?.('Please enter email and password', 'error');
-          setIsLoading(false);
           return;
         }
 
-        // ✅ REMOVED: console.log('Sending login data') - was exposing password in plain text
-        const credentials = {
+        const response = await api.login({
           email: formData.email,
           password: formData.password
-        };
-
-        const response = await api.login(credentials);
-        // ✅ REMOVED: console.log('Login response') - may contain token data
+        });
 
         if (response?.user) {
           showToast?.('Login successful!', 'success');
           onLoginSuccess(response.user);
-          setFormData({
-            name: '',
-            email: '',
-            password: '',
-            confirmPassword: '',
-            otp: '',
-            newPassword: '',
-            confirmNewPassword: ''
-          });
+          resetForm();
           onClose();
         } else {
-          showToast?.('Login failed - no user data received', 'error');
+          showToast?.('Login failed. Please try again.', 'error');
         }
 
       } else if (mode === 'forgot-password') {
         if (!formData.email) {
           showToast?.('Please enter your email', 'error');
-          setIsLoading(false);
           return;
         }
 
@@ -108,13 +94,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
       } else if (mode === 'reset-password') {
         if (formData.newPassword !== formData.confirmNewPassword) {
           showToast?.('Passwords do not match', 'error');
-          setIsLoading(false);
           return;
         }
 
         if (!formData.otp || formData.otp.length !== 6) {
           showToast?.('Please enter a valid 6-digit OTP', 'error');
-          setIsLoading(false);
           return;
         }
 
@@ -126,40 +110,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
 
         showToast?.('Password reset successful! You can now sign in.', 'success');
         setMode('login');
-        setFormData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          otp: '',
-          newPassword: '',
-          confirmNewPassword: ''
-        });
+        resetForm();
       }
+
     } catch (error) {
-      // ✅ Only log error type, never the error content which may contain credentials
-      showToast?.(error instanceof Error ? error.message : 'Authentication failed', 'error');
+      // ✅ Shows clean backend messages e.g. "Email already registered", "Invalid credentials"
+      const message = error instanceof Error ? error.message : 'Something went wrong';
+      showToast?.(message, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
-    try {
-      setIsLoading(true);
-      showToast?.('Coming soon!', 'info');
-      setIsLoading(false);
-    } catch (error) {
-      showToast?.(`${provider} login failed`, 'error');
-      setIsLoading(false);
-    }
+    showToast?.('Coming soon!', 'info');
   };
 
   const getTitle = () => {
@@ -207,12 +175,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
             </button>
 
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-serif font-bold mb-2">
-                {getTitle()}
-              </h2>
-              <p className="text-brand-500 text-sm">
-                {getSubtitle()}
-              </p>
+              <h2 className="text-3xl font-serif font-bold mb-2">{getTitle()}</h2>
+              <p className="text-brand-500 text-sm">{getSubtitle()}</p>
             </div>
 
             <form className="space-y-4" onSubmit={handleSubmit}>
@@ -378,7 +342,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
                     <span className="bg-white dark:bg-brand-900 px-4 text-brand-400">Or continue with</span>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
