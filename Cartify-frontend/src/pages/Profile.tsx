@@ -99,12 +99,18 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
   } catch (error: any) {
     console.error('Failed to fetch profile:', error);
     const msg = error?.message || '';
-    if (msg.includes('User not found') || msg.includes('404')) {
-      // Backend restarted — session is invalid, force re-login
+    
+    if (msg.includes('User not found')) {
+      // DB was wiped - don't auto logout, just show message
+      showToast('Profile unavailable. Please log in again.', 'error');
+      // Give user time to read the message before logout
+      setTimeout(() => onLogout(), 2000);
+    } else if (msg.includes('Token expired') || msg.includes('401')) {
       showToast('Session expired. Please log in again.', 'error');
-      setTimeout(() => onLogout(), 1500);
+      setTimeout(() => onLogout(), 2000);
     } else {
-      showToast('Failed to load profile', 'info');
+      // Network error etc - don't logout
+      showToast('Could not load profile. Check your connection.', 'info');
     }
   }
 };
