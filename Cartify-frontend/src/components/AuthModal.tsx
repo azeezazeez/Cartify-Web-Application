@@ -37,13 +37,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
           return;
         }
 
-        console.log('Sending registration data:', {
-          email: formData.email,
-          password: formData.password,
-          username: formData.name,
-          role: 'USER'
-        });
-
+        // ✅ REMOVED: console.log leaking password in plain text
         const userData = {
           email: formData.email,
           password: formData.password,
@@ -52,7 +46,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
         };
 
         const response = await api.register(userData);
-        console.log('Registration response:', response);
+        // ✅ REMOVED: console.log('Registration response') - may contain sensitive data
 
         if (response?.success || response?.data || response?.user || response?.id) {
           showToast?.('Registration successful! You can now sign in.', 'success');
@@ -74,18 +68,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
           return;
         }
 
-        console.log('Sending login data:', {
-          email: formData.email,
-          password: formData.password
-        });
-
+        // ✅ REMOVED: console.log('Sending login data') - was exposing password in plain text
         const credentials = {
           email: formData.email,
           password: formData.password
         };
 
         const response = await api.login(credentials);
-        console.log('Login response:', response);
+        // ✅ REMOVED: console.log('Login response') - may contain token data
 
         if (response?.user) {
           showToast?.('Login successful!', 'success');
@@ -147,7 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, showToast
         });
       }
     } catch (error) {
-      console.error('Auth error:', error);
+      // ✅ Only log error type, never the error content which may contain credentials
       showToast?.(error instanceof Error ? error.message : 'Authentication failed', 'error');
     } finally {
       setIsLoading(false);
