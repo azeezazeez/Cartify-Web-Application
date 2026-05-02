@@ -126,19 +126,6 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
         }
     };
 
-    const selectPredefinedAvatar = async (url: string) => {
-  try {
-    const updated = await api.updateUserProfile({ profileImage: url });
-    // Don't rely on fetchProfile — set directly from response
-    setProfile(prev => prev ? { ...prev, profileImage: url } : prev);
-    showToast('Profile picture updated', 'success');
-    setShowAvatarModal(false);
-  } catch (error: any) {
-    console.error('Avatar update error:', error);
-    showToast(error?.message || 'Failed to update profile picture', 'error');
-  }
-};
-
     const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (passwordData.new !== passwordData.confirm) {
