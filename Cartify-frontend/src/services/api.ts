@@ -52,25 +52,21 @@ const getCurrentUser = (): any | null => {
   }
 };
 
-// Helper to get auth token
 const getAuthToken = (): string | null => {
   const user = getCurrentUser();
   return user?.token || null;
 };
 
-// Helper to get current user ID from localStorage
 const getUserId = (): number | null => {
   const user = getCurrentUser();
   return user?.id || null;
 };
 
-// Helper to check if current user is admin
 const isAdmin = (): boolean => {
   const user = getCurrentUser();
   return user?.role === 'ADMIN';
 };
 
-// Helper to get auth headers for authenticated requests
 const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
   const headers: HeadersInit = {
@@ -82,7 +78,6 @@ const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
-// Standard response handler with better error handling
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text();
@@ -90,6 +85,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       const result = JSON.parse(text);
       throw new Error(result.message || `HTTP ${response.status}: ${response.statusText}`);
     } catch (e) {
+      if (e instanceof Error && e.message.includes('HTTP')) throw e;
       throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
     }
   }
@@ -106,6 +102,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const api = {
   // Auth
   async login(credentials: { email: string; password: string }) {
+    // ✅ NEVER log credentials - password must never appear in console
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,6 +116,7 @@ export const api = {
     }
 
     if (data.data) {
+      // ✅ Store token but never log it
       localStorage.setItem('cartify_currentUser', JSON.stringify(data.data));
     }
 
@@ -126,6 +124,7 @@ export const api = {
   },
 
   async register(userData: any) {
+    // ✅ No logging of userData - it contains password
     const response = await fetch(`${BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -187,8 +186,7 @@ export const api = {
       if (!response.ok) return { items: [], totalItems: 0, totalAmount: 0 };
       const result = await response.json();
       return result.data || result;
-    } catch (error) {
-      console.error('Error fetching cart:', error);
+    } catch {
       return { items: [], totalItems: 0, totalAmount: 0 };
     }
   },
@@ -259,8 +257,7 @@ export const api = {
         if (result.items && Array.isArray(result.items)) return result.items;
       }
       return [];
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
+    } catch {
       return [];
     }
   },
@@ -270,48 +267,36 @@ export const api = {
     if (!userId) throw new Error('User not logged in');
 
     try {
-      console.log('Toggling wishlist - User ID:', userId, 'Product ID:', productId);
-
-      // First, try to ADD to wishlist
       const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ userId, productId }),
       });
 
-      // If add succeeds (200 OK), product was NOT in wishlist - now it is added
       if (addResponse.ok) {
-        console.log('Successfully added to wishlist');
         return { isWishlisted: true };
       }
 
-      // If add fails with 409 (Conflict), product IS already in wishlist - so remove it
       if (addResponse.status === 409) {
-        console.log('Product already in wishlist, removing...');
         const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
           method: 'DELETE',
           headers: getAuthHeaders(),
         });
 
         if (removeResponse.ok) {
-          console.log('Successfully removed from wishlist');
           return { isWishlisted: false };
         } else {
           const errorData = await removeResponse.json();
-          console.error('Remove failed:', errorData);
           throw new Error(errorData.message || 'Failed to remove from wishlist');
         }
       }
 
-      // Handle other errors
       const errorData = await addResponse.json();
       throw new Error(errorData.message || 'Failed to toggle wishlist');
     } catch (error) {
-      console.error('Toggle wishlist error:', error);
       throw error;
     }
   },
-
 
   async createOrder(): Promise<any> {
     const userId = getUserId();
@@ -367,12 +352,7 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-
   async getUserProfile(): Promise<any> {
-     try {
-    await fetch(`${BASE_URL}/products`); // lightweight public endpoint
-  } catch (_) {}
-    
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       headers: getAuthHeaders(),
     });
@@ -397,13 +377,10 @@ export const api = {
     return handleResponse<void>(response);
   },
 
-  // Admin Methods (Requires Auth + Admin Role)
+  // Admin Methods
   async adminGetAllOrders(): Promise<AdminOrder[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
-
-    const response = await fetch(`${BASE_URL}/admin/orders`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(`${BASE_URL}/admin/orders`, { headers: getAuthHeaders() });
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch orders');
     return data.data;
@@ -411,10 +388,7 @@ export const api = {
 
   async adminGetOrderStats(): Promise<OrderStats> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
-
-    const response = await fetch(`${BASE_URL}/admin/orders/stats`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(`${BASE_URL}/admin/orders/stats`, { headers: getAuthHeaders() });
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch stats');
     return data.data;
@@ -422,7 +396,6 @@ export const api = {
 
   async adminUpdateOrderStatus(orderId: string, status: string): Promise<AdminOrder> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
-
     const response = await fetch(`${BASE_URL}/admin/orders/${orderId}/status`, {
       method: 'PUT',
       headers: getAuthHeaders(),
@@ -435,29 +408,14 @@ export const api = {
 
   async adminGetAllCustomers(): Promise<AdminCustomer[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
-
-    const response = await fetch(`${BASE_URL}/admin/customers`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(`${BASE_URL}/admin/customers`, { headers: getAuthHeaders() });
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch customers');
     return data.data;
   },
 
-  // Helper Methods
-  isAdmin(): boolean {
-    return isAdmin();
-  },
-
-  getCurrentUser(): any | null {
-    return getCurrentUser();
-  },
-
-  getUserId(): number | null {
-    return getUserId();
-  },
-
-  getAuthToken(): string | null {
-    return getAuthToken();
-  }
+  isAdmin(): boolean { return isAdmin(); },
+  getCurrentUser(): any | null { return getCurrentUser(); },
+  getUserId(): number | null { return getUserId(); },
+  getAuthToken(): string | null { return getAuthToken(); },
 };
