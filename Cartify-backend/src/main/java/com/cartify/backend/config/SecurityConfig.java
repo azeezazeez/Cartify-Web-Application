@@ -33,15 +33,17 @@ public class SecurityConfig {
                 .frameOptions(frame -> frame.disable())
             )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/api/products/**",
-                    "/api/public/**",
-                    "/api/debug/**",
-                    "/h2-console/**"
-                ).permitAll()
-                .anyRequest().authenticated()
-            )
+    .requestMatchers(
+        "/api/auth/login",
+        "/api/auth/register",
+        "/api/auth/forgot-password/**",
+        "/api/products/**",
+        "/api/public/**",
+        "/api/debug/**",
+        "/h2-console/**"
+    ).permitAll()
+    .anyRequest().authenticated()
+)
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
