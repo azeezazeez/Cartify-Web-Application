@@ -83,7 +83,9 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
         }
     }, [activeTab, user]);
 
-    const fetchProfile = async () => {
+    // Replace your fetchProfile function in Profile.tsx with this:
+
+const fetchProfile = async () => {
   try {
     const data = await api.getUserProfile();
     setProfile(data);
@@ -97,20 +99,19 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
       zipCode: data.zipCode || '',
     });
   } catch (error: any) {
-    console.error('Failed to fetch profile:', error);
     const msg = error?.message || '';
-    
-    if (msg.includes('User not found')) {
-      // DB was wiped - don't auto logout, just show message
-      showToast('Profile unavailable. Please log in again.', 'error');
-      // Give user time to read the message before logout
-      setTimeout(() => onLogout(), 2000);
-    } else if (msg.includes('Token expired') || msg.includes('401')) {
+
+    if (msg.includes('Token expired') || msg.includes('Invalid token')) {
+      // Only logout for actual auth failures
       showToast('Session expired. Please log in again.', 'error');
       setTimeout(() => onLogout(), 2000);
+    } else if (msg.includes('User not found')) {
+      // DB was reset - user needs to re-register, not just re-login
+      showToast('Account not found. Please register again.', 'error');
+      setTimeout(() => onLogout(), 2000);
     } else {
-      // Network error etc - don't logout
-      showToast('Could not load profile. Check your connection.', 'info');
+      // Network error, server down etc — DO NOT logout
+      showToast('Could not load profile. Please try again.', 'info');
     }
   }
 };
