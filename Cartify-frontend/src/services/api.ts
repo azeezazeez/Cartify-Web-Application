@@ -262,35 +262,39 @@ export const api = {
     }
   },
 
-  async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
-    const userId = getUserId();
-    if (!userId) throw new Error('User not logged in');
+ async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
+  const userId = getUserId();
+  if (!userId) throw new Error('User not logged in');
 
-    try {
-      const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ userId, productId }),
-      });
+  try {
+    // First try to add to wishlist
+    const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId, productId }),
+    });
 
-      if (addResponse.ok) {
-        return { isWishlisted: true };
-      };
-
-        if (removeResponse.ok) {
-          return { isWishlisted: false };
-        } else {
-          const errorData = await removeResponse.json();
-          throw new Error(errorData.message || 'Failed to remove from wishlist');
-        }
-      }
-
-      const errorData = await addResponse.json();
-      throw new Error(errorData.message || 'Failed to toggle wishlist');
-    } catch (error) {
-      throw error;
+    if (addResponse.ok) {
+      return { isWishlisted: true };
     }
-  },
+
+    // If add fails (likely item already in wishlist), try to remove it
+    const removeResponse = await fetch(`${BASE_URL}/wishlist/remove`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId, productId }),
+    });
+
+    if (removeResponse.ok) {
+      return { isWishlisted: false };
+    } else {
+      const errorData = await removeResponse.json();
+      throw new Error(errorData.message || 'Failed to remove from wishlist');
+    }
+  } catch (error) {
+    throw error;
+  }
+},
 
   async createOrder(): Promise<any> {
     const userId = getUserId();
