@@ -84,23 +84,30 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
     }, [activeTab, user]);
 
     const fetchProfile = async () => {
-        try {
-            const data = await api.getUserProfile();
-            setProfile(data);
-            setFormData({
-                username: data.username || '',
-                phoneNumber: data.phoneNumber || '',
-                address: data.address || '',
-                city: data.city || '',
-                state: data.state || '',
-                country: data.country || '',
-                zipCode: data.zipCode || '',
-            });
-        } catch (error) {
-            console.error('Failed to fetch profile:', error);
-            showToast('Failed to load profile', 'info');
-        }
-    };
+  try {
+    const data = await api.getUserProfile();
+    setProfile(data);
+    setFormData({
+      username: data.username || '',
+      phoneNumber: data.phoneNumber || '',
+      address: data.address || '',
+      city: data.city || '',
+      state: data.state || '',
+      country: data.country || '',
+      zipCode: data.zipCode || '',
+    });
+  } catch (error: any) {
+    console.error('Failed to fetch profile:', error);
+    const msg = error?.message || '';
+    if (msg.includes('User not found') || msg.includes('404')) {
+      // Backend restarted — session is invalid, force re-login
+      showToast('Session expired. Please log in again.', 'error');
+      setTimeout(() => onLogout(), 1500);
+    } else {
+      showToast('Failed to load profile', 'info');
+    }
+  }
+};
 
     const handleSaveProfile = async () => {
         if (!formData.username.trim()) {
