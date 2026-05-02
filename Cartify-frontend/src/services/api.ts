@@ -261,40 +261,38 @@ async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
   if (!userId) throw new Error('User not logged in');
 
   try {
-    // Check if product is already in wishlist first
-    const checkResponse = await fetch(`${BASE_URL}/wishlist/${userId}/check/${productId}`, {
+    // Try to add to wishlist
+    const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
+      method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ userId, productId }),
     });
-    
-    if (checkResponse.ok) {
-      const result = await checkResponse.json();
-      const isInWishlist = result?.data === true;
-      
-      if (isInWishlist) {
-        const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        });
-        
-        if (removeResponse.ok) {
-          return { isWishlisted: false };
-        }
-      } else {
-        const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ userId, productId }),
-        });
-        
-        if (addResponse.ok) {
-          return { isWishlisted: true };
-        }
-      }
+
+    // If add succeeds, it was not in wishlist before
+    if (addResponse.ok) {
+      return { isWishlisted: true };
     }
-    
-    throw new Error('Failed to toggle wishlist');
+
+    // If add fails with 409 (Conflict), the item is already in wishlist
+    if (addResponse.status === 409) {
+      // Remove it using the correct endpoint pattern
+      const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+
+      if (removeResponse.ok) {
+        return { isWishlisted: false };
+      }
+      
+      const errorData = await removeResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to remove from wishlist');
+    }
+
+    // Handle other add errors
+    const errorData = await addResponse.json().catch(() => ({}));
+    throw new Error(errorData.message || 'Failed to toggle wishlist');
   } catch (error) {
-    console.error('Toggle wishlist error:', error);
     throw error;
   }
 },
