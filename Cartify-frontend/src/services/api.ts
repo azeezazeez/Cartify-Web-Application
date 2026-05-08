@@ -2,6 +2,21 @@ import { Product, CartItem } from '../types';
 
 const BASE_URL = 'https://cartify-web-application.onrender.com/api';
 
+export interface UserProfile {
+  id: number;
+  email: string;
+  username: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
+  role: string;
+  profileImage?: string;
+  createdAt?: string;
+}
+
 export interface AdminOrder {
   orderId: string;
   userId: number;
@@ -133,6 +148,15 @@ export const api = {
     localStorage.removeItem('cartify_currentUser');
   },
 
+  // ─── FIX: Added missing getUserProfile method ───────────────────────────────
+  async getUserProfile(): Promise<UserProfile> {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<UserProfile>(response);
+  },
+
   async generateOtp(email: string) {
     const response = await fetch(`${BASE_URL}/auth/forgot-password/generate-otp`, {
       method: 'POST',
@@ -231,7 +255,6 @@ export const api = {
     await handleResponse<any>(response);
   },
 
-
   async getWishlist(): Promise<Product[]> {
     const userId = getUserId();
     if (!userId) return [];
@@ -256,46 +279,45 @@ export const api = {
     }
   },
 
-async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
-  const userId = getUserId();
-  if (!userId) throw new Error('User not logged in');
+  async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
+    const userId = getUserId();
+    if (!userId) throw new Error('User not logged in');
 
-  try {
-    // Try to add to wishlist
-    const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ userId, productId }),
-    });
-
-    // If add succeeds, it was not in wishlist before
-    if (addResponse.ok) {
-      return { isWishlisted: true };
-    }
-
-    // If add fails with 409 (Conflict), the item is already in wishlist
-    if (addResponse.status === 409) {
-      // Remove it using the correct endpoint pattern
-      const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-        method: 'DELETE',
+    try {
+      // Try to add to wishlist
+      const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
+        method: 'POST',
         headers: getAuthHeaders(),
+        body: JSON.stringify({ userId, productId }),
       });
 
-      if (removeResponse.ok) {
-        return { isWishlisted: false };
+      // If add succeeds, it was not in wishlist before
+      if (addResponse.ok) {
+        return { isWishlisted: true };
       }
-      
-      const errorData = await removeResponse.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to remove from wishlist');
-    }
 
-    // Handle other add errors
-    const errorData = await addResponse.json().catch(() => ({}));
-    throw new Error(errorData.message || 'Failed to toggle wishlist');
-  } catch (error) {
-    throw error;
-  }
-},
+      // If add fails with 409 (Conflict), the item is already in wishlist — remove it
+      if (addResponse.status === 409) {
+        const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        });
+
+        if (removeResponse.ok) {
+          return { isWishlisted: false };
+        }
+
+        const errorData = await removeResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to remove from wishlist');
+      }
+
+      // Handle other add errors
+      const errorData = await addResponse.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Failed to toggle wishlist');
+    } catch (error) {
+      throw error;
+    }
+  },
 
   async createOrder(): Promise<any> {
     const userId = getUserId();
@@ -351,18 +373,18 @@ async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
     return handleResponse<any>(response);
   },
 
-  async updateUserProfile(profileData: any): Promise<any> {
+  async updateUserProfile(profileData: any): Promise<UserProfile> {
     const cleanedData = Object.fromEntries(
-        Object.entries(profileData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+      Object.entries(profileData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
     );
 
     const response = await fetch(`${BASE_URL}/auth/profile`, {
-        method: 'PUT',
-        headers: getAuthHeaders(),
-        body: JSON.stringify(cleanedData),
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(cleanedData),
     });
-    return handleResponse<any>(response);
-},
+    return handleResponse<UserProfile>(response);
+  },
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
@@ -373,7 +395,8 @@ async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
     return handleResponse<void>(response);
   },
 
-  // Admin Methods
+  // ─── Admin Methods ───────────────────────────────────────────────────────────
+
   async adminGetAllOrders(): Promise<AdminOrder[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/orders`, { headers: getAuthHeaders() });
