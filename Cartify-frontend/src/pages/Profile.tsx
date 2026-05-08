@@ -117,13 +117,22 @@ const fetchProfile = async () => {
 };
 
     const handleSaveProfile = async () => {
-        if (!formData.username.trim()) {
-            showToast('Username is required', 'info');
-            return;
-        }
-        try {
-            setIsSaving(true);
-            const updatedProfile = await api.updateUserProfile(formData);
+    if (!formData.username.trim()) {
+        showToast('Username is required', 'info');
+        return;
+    }
+    try {
+        setIsSaving(true);
+        const payload = {
+            username: formData.username.trim(),
+            ...(formData.phoneNumber && { phoneNumber: formData.phoneNumber }),
+            ...(formData.address && { address: formData.address }),
+            ...(formData.city && { city: formData.city }),
+            ...(formData.state && { state: formData.state }),
+            ...(formData.country && { country: formData.country }),
+            ...(formData.zipCode && { zipCode: formData.zipCode }),
+        };
+        const updatedProfile = await api.updateUserProfile(payload);
             setProfile(updatedProfile);
             setIsEditing(false);
             showToast('Profile updated successfully!', 'success');
