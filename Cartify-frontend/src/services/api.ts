@@ -351,21 +351,18 @@ async toggleWishlist(productId: string): Promise<{ isWishlisted: boolean }> {
     return handleResponse<any>(response);
   },
 
-  async getUserProfile(): Promise<any> {
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
-      headers: getAuthHeaders(),
-    });
-    return handleResponse<any>(response);
-  },
-
   async updateUserProfile(profileData: any): Promise<any> {
+    const cleanedData = Object.fromEntries(
+        Object.entries(profileData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
+    );
+
     const response = await fetch(`${BASE_URL}/auth/profile`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(cleanedData),
     });
     return handleResponse<any>(response);
-  },
+},
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
