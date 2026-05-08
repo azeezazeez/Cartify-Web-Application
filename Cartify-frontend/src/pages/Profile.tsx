@@ -2,22 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User as UserIcon, Package, Settings, LogOut, MapPin, Phone, Mail, Camera, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { api } from '../services/api';
-
-interface UserProfile {
-    id: number;
-    email: string;
-    username: string;
-    phoneNumber?: string;
-    address?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    zipCode?: string;
-    role: string;
-    profileImage?: string;
-    createdAt?: string;
-}
+import { api, UserProfile } from '../services/api';
 
 type TabType = 'personal' | 'orders' | 'settings';
 
@@ -83,59 +68,60 @@ const Profile: React.FC<ProfileProps> = ({ user, onLogout, showToast }) => {
         }
     }, [activeTab, user]);
 
-    // Replace your fetchProfile function in Profile.tsx with this:
+    // ─── FIX: Uses api.getUserProfile() which now exists ────────────────────────
+    const fetchProfile = async () => {
+        try {
+            const data = await api.getUserProfile();
+            setProfile(data);
+            setFormData({
+                username: data.username || '',
+                phoneNumber: data.phoneNumber || '',
+                address: data.address || '',
+                city: data.city || '',
+                state: data.state || '',
+                country: data.country || '',
+                zipCode: data.zipCode || '',
+            });
+        } catch (error: any) {
+            const msg = error?.message || '';
 
-const fetchProfile = async () => {
-  try {
-    const data = await api.getUserProfile();
-    setProfile(data);
-    setFormData({
-      username: data.username || '',
-      phoneNumber: data.phoneNumber || '',
-      address: data.address || '',
-      city: data.city || '',
-      state: data.state || '',
-      country: data.country || '',
-      zipCode: data.zipCode || '',
-    });
-  } catch (error: any) {
-    const msg = error?.message || '';
-
-    if (msg.includes('Token expired') || msg.includes('Invalid token')) {
-      // Only logout for actual auth failures
-      showToast('Session expired. Please log in again.', 'error');
-      setTimeout(() => onLogout(), 2000);
-    } else if (msg.includes('User not found')) {
-      // DB was reset - user needs to re-register, not just re-login
-      showToast('Account not found. Please register again.', 'error');
-      setTimeout(() => onLogout(), 2000);
-    } else {
-      // Network error, server down etc — DO NOT logout
-      showToast('Could not load profile. Please try again.', 'info');
-    }
-  }
-};
+            if (msg.includes('Token expired') || msg.includes('Invalid token')) {
+                // Only logout for actual auth failures
+                showToast('Session expired. Please log in again.', 'error');
+                setTimeout(() => onLogout(), 2000);
+            } else if (msg.includes('User not found')) {
+                // DB was reset — user needs to re-register, not just re-login
+                showToast('Account not found. Please register again.', 'error');
+                setTimeout(() => onLogout(), 2000);
+            } else {
+                // Network error, server down, etc. — DO NOT logout
+                showToast('Could not load profile. Please try again.', 'info');
+            }
+        }
+    };
 
     const handleSaveProfile = async () => {
-    if (!formData.username.trim()) {
-        showToast('Username is required', 'info');
-        return;
-    }
-    try {
-        setIsSaving(true);
-        const payload = {
-            username: formData.username.trim(),
-            ...(formData.phoneNumber && { phoneNumber: formData.phoneNumber }),
-            ...(formData.address && { address: formData.address }),
-            ...(formData.city && { city: formData.city }),
-            ...(formData.state && { state: formData.state }),
-            ...(formData.country && { country: formData.country }),
-            ...(formData.zipCode && { zipCode: formData.zipCode }),
-        };
-        const updatedProfile = await api.updateUserProfile(payload);
+        if (!formData.username.trim()) {
+            showToast('Username is required', 'info');
+            return;
+        }
+        try {
+            setIsSaving(true);
+            const payload = {
+                username: formData.username.trim(),
+                ...(formData.phoneNumber && { phoneNumber: formData.phoneNumber }),
+                ...(formData.address && { address: formData.address }),
+                ...(formData.city && { city: formData.city }),
+                ...(formData.state && { state: formData.state }),
+                ...(formData.country && { country: formData.country }),
+                ...(formData.zipCode && { zipCode: formData.zipCode }),
+            };
+            const updatedProfile = await api.updateUserProfile(payload);
             setProfile(updatedProfile);
             setIsEditing(false);
             showToast('Profile updated successfully!', 'success');
+
+            // Sync username back to localStorage
             const storedUser = localStorage.getItem('cartify_currentUser');
             if (storedUser) {
                 const userData = JSON.parse(storedUser);
@@ -222,11 +208,11 @@ const fetchProfile = async () => {
 
     const getOrderStatusDisplay = (status: string) => {
         const statusMap: { [key: string]: { label: string; color: string } } = {
-            'PENDING': { label: 'Pending', color: 'bg-yellow-500/10 text-yellow-600' },
+            'PENDING':    { label: 'Pending',    color: 'bg-yellow-500/10 text-yellow-600' },
             'PROCESSING': { label: 'Processing', color: 'bg-blue-500/10 text-blue-600' },
-            'SHIPPED': { label: 'Shipped', color: 'bg-indigo-500/10 text-indigo-600' },
-            'DELIVERED': { label: 'Delivered', color: 'bg-green-500/10 text-green-600' },
-            'CANCELLED': { label: 'Cancelled', color: 'bg-red-500/10 text-red-600' },
+            'SHIPPED':    { label: 'Shipped',    color: 'bg-indigo-500/10 text-indigo-600' },
+            'DELIVERED':  { label: 'Delivered',  color: 'bg-green-500/10 text-green-600' },
+            'CANCELLED':  { label: 'Cancelled',  color: 'bg-red-500/10 text-red-600' },
         };
         return statusMap[status] || { label: status || 'Processing', color: 'bg-gray-500/10 text-gray-600' };
     };
@@ -369,9 +355,9 @@ const fetchProfile = async () => {
 
                                     {[
                                         { label: 'ZIP Code', key: 'zipCode' },
-                                        { label: 'City', key: 'city' },
-                                        { label: 'State', key: 'state' },
-                                        { label: 'Country', key: 'country' },
+                                        { label: 'City',     key: 'city' },
+                                        { label: 'State',    key: 'state' },
+                                        { label: 'Country',  key: 'country' },
                                     ].map(({ label, key }) => (
                                         <div key={key} className="space-y-2">
                                             <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-1">{label}</label>
@@ -480,9 +466,9 @@ const fetchProfile = async () => {
                             </div>
                             <form onSubmit={handlePasswordUpdate} className="space-y-5">
                                 {[
-                                    { label: 'Current Password', key: 'current' },
-                                    { label: 'New Password', key: 'new' },
-                                    { label: 'Confirm New Password', key: 'confirm' },
+                                    { label: 'Current Password',      key: 'current' },
+                                    { label: 'New Password',          key: 'new' },
+                                    { label: 'Confirm New Password',  key: 'confirm' },
                                 ].map(({ label, key }) => (
                                     <div key={key} className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-1">{label}</label>
