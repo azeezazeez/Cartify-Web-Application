@@ -13,7 +13,8 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    @Value("${jwt.secret:yourSuperSecretKeyForJWTThatIsAtLeast256BitsLong}")
+    // ✅ Default is now 32+ characters — safe for HS256
+    @Value("${jwt.secret:cartify-super-secret-key-min-32-chars!!}")
     private String SECRET_KEY;
 
     @Value("${jwt.expiration:86400000}")
@@ -21,17 +22,18 @@ public class JwtUtil {
 
     private Key getSigningKey() {
         byte[] keyBytes = SECRET_KEY.getBytes();
+        // Keys.hmacShaKeyFor throws WeakKeyException if keyBytes < 32 — safe by design
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(String email, String role) {
         return Jwts.builder()
-                .setSubject(email)
-                .claim("role", role)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+            .setSubject(email)
+            .claim("role", role)
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+            .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+            .compact();
     }
 
     public String extractEmail(String token) {
@@ -46,20 +48,22 @@ public class JwtUtil {
         return extractAllClaims(token).getExpiration().before(new Date());
     }
 
-    private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
     public boolean validateToken(String token, String email) {
         try {
             String extractedEmail = extractEmail(token);
-            return (extractedEmail.equals(email) && !isTokenExpired(token));
+            return extractedEmail != null
+                && extractedEmail.equals(email)
+                && !isTokenExpired(token);
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody();
     }
 }
