@@ -14,12 +14,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-@Component
 public class JwtFilter extends OncePerRequestFilter {
 
     @Autowired
@@ -82,7 +80,6 @@ public class JwtFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 } else {
-                    // ✅ Fixed: explicitly reject instead of silently falling through
                     sendError(response, "Token validation failed");
                     return;
                 }
@@ -95,7 +92,6 @@ public class JwtFilter extends OncePerRequestFilter {
             sendError(response, "Invalid token");
             return;
         } catch (Exception e) {
-            // Useful for debugging — remove or replace with a logger in production
             System.err.println("JWT auth failed: " + e.getClass().getSimpleName() + " — " + e.getMessage());
             sendError(response, "Authentication failed");
             return;
@@ -104,7 +100,6 @@ public class JwtFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** Writes a JSON 401 response and sets the correct content type. */
     private void sendError(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
