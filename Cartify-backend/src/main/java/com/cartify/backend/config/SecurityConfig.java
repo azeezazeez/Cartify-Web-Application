@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.Arrays;
 import java.util.List;
@@ -33,19 +34,28 @@ public class SecurityConfig {
                 .frameOptions(frame -> frame.disable())
             )
             .authorizeHttpRequests(auth -> auth
-    .requestMatchers(
-        "/api/auth/login",
-        "/api/auth/register",
-        "/api/auth/forgot-password/**",
-        "/api/products/**",
-        "/api/public/**",
-        "/api/debug/**",
-        "/h2-console/**"
-    ).permitAll()
-    .anyRequest().authenticated()
-)
+                .requestMatchers(
+                    "/api/auth/login",
+                    "/api/auth/register",
+                    "/api/auth/forgot-password/**",
+                    "/api/products/**",
+                    "/api/public/**",
+                    "/api/debug/**",
+                    "/h2-console/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+            // ✅ Disable Spring's default 401 redirect so our filter's JSON response
+            //    is returned as-is instead of being overwritten by a redirect
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Unauthorized — please log in\"}");
+                })
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -61,20 +71,20 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "https://cartify-cart.vercel.app",
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "http://localhost:8080"
+            "https://cartify-cart.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://localhost:8080"
         ));
         configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ));
         configuration.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Origin",
-                "X-Requested-With"
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "Origin",
+            "X-Requested-With"
         ));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
