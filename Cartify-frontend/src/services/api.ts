@@ -2,19 +2,22 @@ import { Product, CartItem } from '../types';
 
 const BASE_URL = 'https://cartify-web-application.onrender.com/api';
 
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
 export interface UserProfile {
   id: number;
   email: string;
   username: string;
-  phoneNumber?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  zipCode?: string;
   role: string;
-  profileImage?: string;
-  createdAt?: string;
+  phoneNumber?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  zipCode?: string | null;
+  profileImage?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export interface AdminOrder {
@@ -56,65 +59,60 @@ export interface AdminCustomer {
   totalSpent: number;
 }
 
-// Helper to get current user from localStorage
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+
 const getCurrentUser = (): any | null => {
-  const user = localStorage.getItem('cartify_currentUser');
-  if (!user) return null;
   try {
-    return JSON.parse(user);
+    const stored = localStorage.getItem('cartify_currentUser');
+    return stored ? JSON.parse(stored) : null;
   } catch {
     return null;
   }
 };
 
-const getAuthToken = (): string | null => {
-  const user = getCurrentUser();
-  return user?.token || null;
-};
-
-const getUserId = (): number | null => {
-  const user = getCurrentUser();
-  return user?.id || null;
-};
-
-const isAdmin = (): boolean => {
-  const user = getCurrentUser();
-  return user?.role === 'ADMIN';
-};
+const getAuthToken = (): string | null => getCurrentUser()?.token ?? null;
+const getUserId    = (): number | null => getCurrentUser()?.id    ?? null;
+const isAdmin      = (): boolean        => getCurrentUser()?.role === 'ADMIN';
 
 const getAuthHeaders = (): HeadersInit => {
   const token = getAuthToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   return headers;
 };
 
+// ─── Generic response handler ─────────────────────────────────────────────────
+
 async function handleResponse<T>(response: Response): Promise<T> {
+  // Try to parse JSON regardless of status so we can surface backend messages
+  let result: any;
+  try {
+    result = await response.json();
+  } catch {
+    if (!response.ok)
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    return undefined as T;
+  }
+
   if (!response.ok) {
-    const text = await response.text();
-    try {
-      const result = JSON.parse(text);
-      throw new Error(result.message || `HTTP ${response.status}: ${response.statusText}`);
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('HTTP')) throw e;
-      throw new Error(text || `HTTP ${response.status}: ${response.statusText}`);
-    }
+    throw new Error(result?.message || `HTTP ${response.status}: ${response.statusText}`);
   }
 
-  const result = await response.json();
-
-  if (result && typeof result === 'object' && 'success' in result && !result.success) {
-    throw new Error(result.message || 'API request failed');
+  // ApiResponse wrapper: { success, message, data }
+  if (result && typeof result === 'object' && 'success' in result) {
+    if (!result.success) throw new Error(result.message || 'API request failed');
+    return (result.data !== undefined ? result.data : result) as T;
   }
 
-  return (result && typeof result === 'object' && 'data' in result) ? result.data : result;
+  return result as T;
 }
 
+// ─── API ──────────────────────────────────────────────────────────────────────
+
 export const api = {
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
   async login(credentials: { email: string; password: string }) {
     const response = await fetch(`${BASE_URL}/auth/login`, {
       method: 'POST',
@@ -124,13 +122,11 @@ export const api = {
 
     const data = await response.json();
 
-    if (!response.ok || !data.success) {
+    if (!response.ok || !data.success)
       throw new Error(data.message || 'Login failed');
-    }
 
-    if (data.data) {
+    if (data.data)
       localStorage.setItem('cartify_currentUser', JSON.stringify(data.data));
-    }
 
     return { user: data.data };
   },
@@ -148,7 +144,9 @@ export const api = {
     localStorage.removeItem('cartify_currentUser');
   },
 
-  // ─── FIX: Added missing getUserProfile method ───────────────────────────────
+  // ── Profile ───────────────────────────────────────────────────────────────
+
+  /** GET /api/auth/profile — fetch the current user's full profile. */
   async getUserProfile(): Promise<UserProfile> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       method: 'GET',
@@ -156,6 +154,56 @@ export const api = {
     });
     return handleResponse<UserProfile>(response);
   },
+
+  /**
+   * PUT /api/auth/profile — update profile fields.
+   *
+   * FIX: We no longer strip out null / empty-string values.
+   * Sending null explicitly tells the backend to CLEAR that field.
+   * Previously the filter caused cleared fields to be silently dropped,
+   * so the old value stayed in the database forever.
+   */
+  async updateUserProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(profileData),   // send as-is, nulls included
+    });
+    return handleResponse<UserProfile>(response);
+  },
+
+  /**
+   * Convenience wrapper: update only the profile image URL.
+   * Used by the avatar picker in Profile.tsx.
+   */
+  async updateProfileImage(imageUrl: string): Promise<UserProfile> {
+    return api.updateUserProfile({ profileImage: imageUrl });
+  },
+
+  /** PUT /api/auth/profile/change-password */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    return handleResponse<void>(response);
+  },
+
+  /**
+   * DELETE /api/auth/profile — permanently remove the account.
+   * FIX: This method was missing entirely; the old code called resetPassword()
+   * as a proxy for deletion, which only changed the password — never deleted.
+   */
+  async deleteAccount(): Promise<void> {
+    const response = await fetch(`${BASE_URL}/auth/profile`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
+
+  // ── Forgot / Reset Password ───────────────────────────────────────────────
 
   async generateOtp(email: string) {
     const response = await fetch(`${BASE_URL}/auth/forgot-password/generate-otp`, {
@@ -166,7 +214,7 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  async resetPassword(resetData: any) {
+  async resetPassword(resetData: { email: string; otp: string; newPassword: string }) {
     const response = await fetch(`${BASE_URL}/auth/forgot-password/reset`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -175,16 +223,15 @@ export const api = {
     return handleResponse<any>(response);
   },
 
+  // ── Products ──────────────────────────────────────────────────────────────
+
   async getProducts(category?: string, search?: string): Promise<Product[]> {
-    let url = `${BASE_URL}/products`;
     const params = new URLSearchParams();
     if (category && category !== 'All') params.append('category', category);
     if (search) params.append('search', search);
 
-    const queryString = params.toString();
-    if (queryString) url += `?${queryString}`;
-
-    const response = await fetch(url);
+    const qs = params.toString();
+    const response = await fetch(`${BASE_URL}/products${qs ? `?${qs}` : ''}`);
     return handleResponse<Product[]>(response);
   },
 
@@ -192,6 +239,8 @@ export const api = {
     const response = await fetch(`${BASE_URL}/products/${id}`);
     return handleResponse<Product>(response);
   },
+
+  // ── Cart ──────────────────────────────────────────────────────────────────
 
   async getCart(): Promise<any> {
     const userId = getUserId();
@@ -203,7 +252,7 @@ export const api = {
       });
       if (!response.ok) return { items: [], totalItems: 0, totalAmount: 0 };
       const result = await response.json();
-      return result.data || result;
+      return result.data ?? result;
     } catch {
       return { items: [], totalItems: 0, totalAmount: 0 };
     }
@@ -255,6 +304,8 @@ export const api = {
     await handleResponse<any>(response);
   },
 
+  // ── Wishlist ──────────────────────────────────────────────────────────────
+
   async getWishlist(): Promise<Product[]> {
     const userId = getUserId();
     if (!userId) return [];
@@ -266,13 +317,9 @@ export const api = {
       if (!response.ok) return [];
       const result = await response.json();
 
-      if (result && typeof result === 'object') {
-        if ('success' in result && 'data' in result) {
-          return Array.isArray(result.data) ? result.data : [];
-        }
-        if (Array.isArray(result)) return result;
-        if (result.items && Array.isArray(result.items)) return result.items;
-      }
+      if (result?.success && Array.isArray(result.data)) return result.data;
+      if (Array.isArray(result)) return result;
+      if (result?.items && Array.isArray(result.items)) return result.items;
       return [];
     } catch {
       return [];
@@ -283,41 +330,30 @@ export const api = {
     const userId = getUserId();
     if (!userId) throw new Error('User not logged in');
 
-    try {
-      // Try to add to wishlist
-      const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
-        method: 'POST',
+    // Try to add; if the server returns 409 the item is already there → remove it
+    const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ userId, productId }),
+    });
+
+    if (addResponse.ok) return { isWishlisted: true };
+
+    if (addResponse.status === 409) {
+      const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
+        method: 'DELETE',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ userId, productId }),
       });
-
-      // If add succeeds, it was not in wishlist before
-      if (addResponse.ok) {
-        return { isWishlisted: true };
-      }
-
-      // If add fails with 409 (Conflict), the item is already in wishlist — remove it
-      if (addResponse.status === 409) {
-        const removeResponse = await fetch(`${BASE_URL}/wishlist/remove/${userId}/${productId}`, {
-          method: 'DELETE',
-          headers: getAuthHeaders(),
-        });
-
-        if (removeResponse.ok) {
-          return { isWishlisted: false };
-        }
-
-        const errorData = await removeResponse.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to remove from wishlist');
-      }
-
-      // Handle other add errors
-      const errorData = await addResponse.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to toggle wishlist');
-    } catch (error) {
-      throw error;
+      if (removeResponse.ok) return { isWishlisted: false };
+      const err = await removeResponse.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to remove from wishlist');
     }
+
+    const err = await addResponse.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to toggle wishlist');
   },
+
+  // ── Orders ────────────────────────────────────────────────────────────────
 
   async createOrder(): Promise<any> {
     const userId = getUserId();
@@ -330,9 +366,8 @@ export const api = {
     });
 
     const result = await response.json();
-    if (!response.ok || !result.success) {
+    if (!response.ok || !result.success)
       throw new Error(result.message || 'Failed to place order');
-    }
     return result.data;
   },
 
@@ -351,7 +386,6 @@ export const api = {
     }
 
     const result = await response.json();
-
     if (result?.success && Array.isArray(result.data)) return result.data;
     if (Array.isArray(result)) return result;
     return [];
@@ -373,29 +407,7 @@ export const api = {
     return handleResponse<any>(response);
   },
 
-  async updateUserProfile(profileData: any): Promise<UserProfile> {
-    const cleanedData = Object.fromEntries(
-      Object.entries(profileData).filter(([_, v]) => v !== '' && v !== null && v !== undefined)
-    );
-
-    const response = await fetch(`${BASE_URL}/auth/profile`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(cleanedData),
-    });
-    return handleResponse<UserProfile>(response);
-  },
-
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    return handleResponse<void>(response);
-  },
-
-  // ─── Admin Methods ───────────────────────────────────────────────────────────
+  // ── Admin ─────────────────────────────────────────────────────────────────
 
   async adminGetAllOrders(): Promise<AdminOrder[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
@@ -433,8 +445,9 @@ export const api = {
     return data.data;
   },
 
-  isAdmin(): boolean { return isAdmin(); },
-  getCurrentUser(): any | null { return getCurrentUser(); },
-  getUserId(): number | null { return getUserId(); },
-  getAuthToken(): string | null { return getAuthToken(); },
+  // ── Convenience re-exports ────────────────────────────────────────────────
+  isAdmin,
+  getCurrentUser,
+  getUserId,
+  getAuthToken,
 };
