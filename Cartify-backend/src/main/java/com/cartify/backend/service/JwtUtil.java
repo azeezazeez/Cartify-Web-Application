@@ -1,6 +1,7 @@
 package com.cartify.backend.service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -13,7 +14,6 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // ✅ Default is now 32+ characters — safe for HS256
     @Value("${jwt.secret:cartify-super-secret-key-min-32-chars!!}")
     private String SECRET_KEY;
 
@@ -22,7 +22,6 @@ public class JwtUtil {
 
     private Key getSigningKey() {
         byte[] keyBytes = SECRET_KEY.getBytes();
-        // Keys.hmacShaKeyFor throws WeakKeyException if keyBytes < 32 — safe by design
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -44,13 +43,13 @@ public class JwtUtil {
         return extractAllClaims(token).get("role", String.class);
     }
 
-   public boolean isTokenExpired(String token) {
-    try {
-        return extractAllClaims(token).getExpiration().before(new Date());
-    } catch (ExpiredJwtException e) {
-        return true; 
+    public boolean isTokenExpired(String token) {
+        try {
+            return extractAllClaims(token).getExpiration().before(new Date());
+        } catch (ExpiredJwtException e) {
+            return true; // ✅ handle cleanly instead of throwing
+        }
     }
-}
 
     public boolean validateToken(String token, String email) {
         try {
