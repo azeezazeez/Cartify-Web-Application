@@ -26,6 +26,34 @@ import { Product, CartItem } from './types';
 
 const CartDrawer = React.memo(OriginalCartDrawer);
 
+// ─── Helper: check if a JWT token string is expired ──────────────────────────
+const isTokenExpired = (token: string): boolean => {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true; // treat malformed token as expired
+  }
+};
+
+// ─── Helper: get stored user only if token is still valid ────────────────────
+const getValidStoredUser = (): any | null => {
+  try {
+    const userStr = localStorage.getItem('cartify_currentUser');
+    if (!userStr) return null;
+
+    const parsed = JSON.parse(userStr);
+    if (parsed?.token && isTokenExpired(parsed.token)) {
+      localStorage.removeItem('cartify_currentUser');
+      return null;
+    }
+    return parsed;
+  } catch {
+    localStorage.removeItem('cartify_currentUser');
+    return null;
+  }
+};
+
 function App() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
@@ -51,7 +79,6 @@ function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('Featured');
-  const [isCartSyncing, setIsCartSyncing] = useState(false);
 
   const productGridRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -64,39 +91,31 @@ function App() {
 
   const removeToast = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
-  // Memoize cart items
   const memoizedCartItems = useMemo(() => cart.items, [cart.items]);
   const memoizedCartTotal = useMemo(() => cart.totalAmount, [cart.totalAmount]);
   const memoizedCartCount = useMemo(() => cart.totalItems, [cart.totalItems]);
 
-  // Sync user from localStorage
+  // ─── Sync user from localStorage — clears expired tokens automatically ──────
   useEffect(() => {
     const checkUser = () => {
-      const userStr = localStorage.getItem('cartify_currentUser');
-      if (userStr) {
-        try { setUser(JSON.parse(userStr)); }
-        catch { setUser(null); }
-      } else {
-        setUser(null);
-      }
+      const validUser = getValidStoredUser();
+      setUser(validUser);
     };
+
     checkUser();
     window.addEventListener('storage', checkUser);
     return () => window.removeEventListener('storage', checkUser);
   }, []);
 
-  // Admin redirect on initial load
+  // ─── Admin redirect on initial load — only if token is valid ────────────────
   useEffect(() => {
-    const userStr = localStorage.getItem('cartify_currentUser');
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-        if (userData.role === 'ADMIN' && location.pathname === '/') {
-          navigate('/admin');
-          showToast('Welcome to Admin Dashboard!', 'success');
-        }
-      } catch { }
+    const userData = getValidStoredUser();
+    if (!userData) return;
+
+    setUser(userData);
+    if (userData.role === 'ADMIN' && location.pathname === '/') {
+      navigate('/admin');
+      showToast('Welcome to Admin Dashboard!', 'success');
     }
   }, [location.pathname, navigate, showToast]);
 
@@ -104,22 +123,17 @@ function App() {
     try {
       fetch('https://cartify-web-application.onrender.com/api/products').catch(() => { });
 
-      const isLoggedIn = !!localStorage.getItem('cartify_currentUser');
+      const validUser = getValidStoredUser();
       const productsResponse = await api.getProducts();
       setProducts(Array.isArray(productsResponse) ? productsResponse : []);
 
-      if (isLoggedIn) {
+      if (validUser) {
         try {
           const cartResponse = await api.getCart();
           if (cartResponse && typeof cartResponse === 'object') {
-            const transformed = transformCartResponse(cartResponse as any);
-            setCart(transformed);
+            setCart(transformCartResponse(cartResponse as any));
           }
-        } catch (cartError: any) {
-          if (cartError?.message?.includes('401')) {
-            localStorage.removeItem('cartify_currentUser');
-            setUser(null);
-          }
+        } catch {
           setCart({ items: [], totalItems: 0, totalAmount: 0 });
         }
 
@@ -158,22 +172,17 @@ function App() {
     navigate('/');
   };
 
-  // INSTANT ADD TO CART - NO DELAYS
   const addToCart = async (product: Product) => {
     if (!product?.id) return;
 
-    const userStr = localStorage.getItem('cartify_currentUser');
-    if (!userStr) {
+    const validUser = getValidStoredUser();
+    if (!validUser) {
       setIsAuthOpen(true);
       showToast('Please login to add items to cart', 'info');
       return;
     }
 
-    // ✅ Close product modal if open (double safety)
-    if (selectedProduct) {
-      setSelectedProduct(null);
-    }
-
+    if (selectedProduct) setSelectedProduct(null);
     setIsCartOpen(true);
 
     setCart(prevCart => {
@@ -188,7 +197,6 @@ function App() {
           quantity: newQuantity,
           subtotal: newQuantity * (existingItem.productPrice || existingItem.price || 0),
         };
-
         return {
           items: updatedItems,
           totalItems: prevCart.totalItems + 1,
@@ -209,7 +217,6 @@ function App() {
           price: product.price,
           image: product.image,
         };
-
         return {
           items: [...prevCart.items, newItem],
           totalItems: prevCart.totalItems + 1,
@@ -236,10 +243,7 @@ function App() {
     if (!item) return;
 
     const newQuantity = item.quantity + delta;
-    if (newQuantity < 1) {
-      removeFromCart(productId);
-      return;
-    }
+    if (newQuantity < 1) { removeFromCart(productId); return; }
 
     setCart(prevCart => ({
       items: prevCart.items.map(i =>
@@ -285,8 +289,8 @@ function App() {
   };
 
   const toggleWishlist = async (product: Product) => {
-    const userStr = localStorage.getItem('cartify_currentUser');
-    if (!userStr) {
+    const validUser = getValidStoredUser();
+    if (!validUser) {
       setIsAuthOpen(true);
       showToast('Please login to manage wishlist', 'info');
       return;
@@ -463,8 +467,6 @@ function App() {
         <Route path="/admin/orders" element={user?.role === 'ADMIN' ? <div>Orders Management</div> : <Navigate to="/" replace />} />
         <Route path="/admin/products" element={user?.role === 'ADMIN' ? <div>Products Management</div> : <Navigate to="/" replace />} />
         <Route path="/admin/customers" element={user?.role === 'ADMIN' ? <div>Customers Management</div> : <Navigate to="/" replace />} />
-
-        {/* Catch all route - redirect to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
