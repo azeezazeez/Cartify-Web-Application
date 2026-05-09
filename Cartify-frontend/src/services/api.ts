@@ -74,7 +74,26 @@ const getAuthToken = (): string | null => getCurrentUser()?.token ?? null;
 const getUserId    = (): number | null => getCurrentUser()?.id    ?? null;
 const isAdmin      = (): boolean        => getCurrentUser()?.role === 'ADMIN';
 
+// ─── FIX 1: Token expiry check on the frontend ───────────────────────────────
+
+const isTokenExpired = (): boolean => {
+  const token = getAuthToken();
+  if (!token) return true;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // payload.exp is in seconds, Date.now() is in milliseconds
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+};
+
+// ─── FIX 2: getAuthHeaders auto-logs out if token is expired ─────────────────
+
 const getAuthHeaders = (): HeadersInit => {
+  if (isTokenExpired()) {
+    handleUnauthorized(); // auto-logout before any request with expired token
+  }
   const token = getAuthToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -85,7 +104,6 @@ const getAuthHeaders = (): HeadersInit => {
 
 const handleUnauthorized = (): never => {
   localStorage.removeItem('cartify_currentUser');
-  // Only redirect if not already on the login page to avoid redirect loops
   if (!window.location.pathname.includes('/login')) {
     window.location.href = '/login';
   }
@@ -95,7 +113,6 @@ const handleUnauthorized = (): never => {
 // ─── Generic response handler ─────────────────────────────────────────────────
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  // ✅ Handle expired / invalid token globally
   if (response.status === 401) {
     return handleUnauthorized();
   }
@@ -140,8 +157,13 @@ export const api = {
     if (!response.ok || !data.success)
       throw new Error(data.message || data.error || 'Login failed');
 
-    if (data.data)
+    // FIX 3: Ensure token exists in response before storing
+    if (data.data) {
+      if (!data.data.token) {
+        throw new Error('Login response missing token — check backend AuthController response shape');
+      }
       localStorage.setItem('cartify_currentUser', JSON.stringify(data.data));
+    }
 
     return { user: data.data };
   },
@@ -157,6 +179,7 @@ export const api = {
 
   logout() {
     localStorage.removeItem('cartify_currentUser');
+    window.location.href = '/login';
   },
 
   // ── Profile ───────────────────────────────────────────────────────────────
@@ -246,7 +269,6 @@ export const api = {
       const response = await fetch(`${BASE_URL}/cart/${userId}`, {
         headers: getAuthHeaders(),
       });
-      // ✅ Handle 401 in cart too
       if (response.status === 401) return handleUnauthorized();
       if (!response.ok) return { items: [], totalItems: 0, totalAmount: 0 };
       const result = await response.json();
@@ -312,7 +334,6 @@ export const api = {
       const response = await fetch(`${BASE_URL}/wishlist/${userId}`, {
         headers: getAuthHeaders(),
       });
-      // ✅ Handle 401 in wishlist too
       if (response.status === 401) return handleUnauthorized();
       if (!response.ok) return [];
       const result = await response.json();
@@ -365,8 +386,10 @@ export const api = {
       body: JSON.stringify({ shippingAddress: 'Default Address' }),
     });
 
-    const result = await response.json();
+    // FIX 4: Check 401 BEFORE calling response.json()
     if (response.status === 401) return handleUnauthorized();
+
+    const result = await response.json();
     if (!response.ok || !result.success)
       throw new Error(result.message || 'Failed to place order');
     return result.data;
@@ -381,7 +404,9 @@ export const api = {
       headers: getAuthHeaders(),
     });
 
+    // FIX 5: Check 401 BEFORE calling response.json()
     if (response.status === 401) return handleUnauthorized();
+
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Failed to fetch orders: HTTP ${response.status} — ${text}`);
@@ -411,11 +436,13 @@ export const api = {
 
   // ── Admin ─────────────────────────────────────────────────────────────────
 
+  // FIX 6: All admin methods now check 401 BEFORE calling response.json()
+
   async adminGetAllOrders(): Promise<AdminOrder[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/orders`, { headers: getAuthHeaders() });
-    const data = await response.json();
     if (response.status === 401) return handleUnauthorized();
+    const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch orders');
     return data.data;
   },
@@ -423,8 +450,8 @@ export const api = {
   async adminGetOrderStats(): Promise<OrderStats> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/orders/stats`, { headers: getAuthHeaders() });
-    const data = await response.json();
     if (response.status === 401) return handleUnauthorized();
+    const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch stats');
     return data.data;
   },
@@ -436,8 +463,8 @@ export const api = {
       headers: getAuthHeaders(),
       body: JSON.stringify({ status }),
     });
-    const data = await response.json();
     if (response.status === 401) return handleUnauthorized();
+    const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update order status');
     return data.data;
   },
@@ -445,8 +472,8 @@ export const api = {
   async adminGetAllCustomers(): Promise<AdminCustomer[]> {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/customers`, { headers: getAuthHeaders() });
-    const data = await response.json();
     if (response.status === 401) return handleUnauthorized();
+    const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch customers');
     return data.data;
   },
@@ -456,4 +483,5 @@ export const api = {
   getCurrentUser,
   getUserId,
   getAuthToken,
+  isTokenExpired,
 };
