@@ -1,6 +1,5 @@
 package com.cartify.backend.controller;
 
-import com.cartify.backend.config.exception.ResourceNotFoundException;
 import com.cartify.backend.dto.*;
 import com.cartify.backend.entity.User;
 import com.cartify.backend.repository.UserRepository;
@@ -14,7 +13,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,278 +21,262 @@ import java.util.Optional;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private UserRepository userRepository;
+    @Autowired private ForgotPasswordService forgotPasswordService;
+    @Autowired private JwtUtil jwtUtil;
 
-    @Autowired
-    private UserRepository userRepository;
+    // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    @Autowired
-    private ForgotPasswordService forgotPasswordService;
+    /** Returns the authenticated user or throws a 401 response. */
+    private User getAuthenticatedUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return null;
+        return userRepository.findByEmail(auth.getName()).orElse(null);
+    }
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    /** Builds the profile map that is returned to the client. */
+    private Map<String, Object> buildProfileMap(User user) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id",           user.getId());
+        map.put("email",        user.getEmail());
+        map.put("username",     user.getUsername());
+        map.put("role",         user.getRole());
+        map.put("phoneNumber",  user.getPhone());
+        map.put("address",      user.getAddress());
+        map.put("city",         user.getCity());
+        map.put("state",        user.getState());
+        map.put("country",      user.getCountry());
+        map.put("zipCode",      user.getZipCode());
+        map.put("profileImage", user.getProfileImage());
+        map.put("createdAt",    user.getCreatedAt() != null ? user.getCreatedAt().toString() : null);
+        map.put("updatedAt",    user.getUpdatedAt() != null ? user.getUpdatedAt().toString() : null);
+        return map;
+    }
 
-    // ─── Register ────────────────────────────────────────────────────────────────
+    // ─── Register ─────────────────────────────────────────────────────────────
+
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> register(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> register(
+            @RequestBody Map<String, String> request) {
+
         String email    = request.get("email");
         String username = request.get("username");
         String password = request.get("password");
 
-        System.out.println("=== REGISTRATION ATTEMPT ===");
-        System.out.println("Email: " + email);
-        System.out.println("Username: " + username);
+        if (email == null || email.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email is required"));
+        if (username == null || username.isBlank())
+            return ResponseEntity.badRequest().body(ApiResponse.error("Username is required"));
+        if (password == null || password.length() < 6)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Password must be at least 6 characters"));
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(email))
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error("Email already registered"));
-        }
 
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsername(username))
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error("Username already taken"));
-        }
 
         User user = new User();
-        user.setEmail(email);
-        user.setUsername(username);
+        user.setEmail(email.trim().toLowerCase());
+        user.setUsername(username.trim());
         user.setPassword(passwordEncoder.encode(password));
-        user.setCreatedAt(LocalDateTime.now());
+        // First registered user becomes ADMIN, everyone else USER
+        user.setRole(userRepository.count() == 0 ? "ADMIN" : "USER");
 
-        long userCount = userRepository.count();
-        user.setRole(userCount == 0 ? "ADMIN" : "USER");
+        User saved = userRepository.save(user);
+        String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole());
 
-        User savedUser = userRepository.save(user);
-
-        String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole());
-
-        Map<String, Object> responseData = new HashMap<>();
-        responseData.put("id",       savedUser.getId());
-        responseData.put("email",    savedUser.getEmail());
-        responseData.put("username", savedUser.getUsername());
-        responseData.put("role",     savedUser.getRole());
-        responseData.put("token",    token);
+        Map<String, Object> data = new HashMap<>();
+        data.put("id",       saved.getId());
+        data.put("email",    saved.getEmail());
+        data.put("username", saved.getUsername());
+        data.put("role",     saved.getRole());
+        data.put("token",    token);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Registration successful", responseData));
+                .body(ApiResponse.success("Registration successful", data));
     }
 
-    // ─── Login ───────────────────────────────────────────────────────────────────
+    // ─── Login ────────────────────────────────────────────────────────────────
+
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> login(@RequestBody Map<String, String> request) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> login(
+            @RequestBody Map<String, String> request) {
+
         String email    = request.get("email");
         String password = request.get("password");
 
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (email == null || password == null)
+            return ResponseEntity.badRequest().body(ApiResponse.error("Email and password are required"));
 
-        if (userOpt.isEmpty()) {
+        Optional<User> userOpt = userRepository.findByEmail(email.trim().toLowerCase());
+
+        // Use the same message for missing user and wrong password (security best practice)
+        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Invalid email or password"));
         }
 
         User user = userOpt.get();
-
-        if (!passwordEncoder.matches(password, user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Invalid email or password"));
-        }
-
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
 
-        Map<String, Object> responseData = new HashMap<>();
-        responseData.put("id",       user.getId());
-        responseData.put("email",    user.getEmail());
-        responseData.put("username", user.getUsername());
-        responseData.put("role",     user.getRole());
-        responseData.put("token",    token);
+        Map<String, Object> data = new HashMap<>();
+        data.put("id",       user.getId());
+        data.put("email",    user.getEmail());
+        data.put("username", user.getUsername());
+        data.put("role",     user.getRole());
+        data.put("token",    token);
 
-        return ResponseEntity.ok(ApiResponse.success("Login successful", responseData));
+        return ResponseEntity.ok(ApiResponse.success("Login successful", data));
     }
 
-    // ─── Forgot Password: Generate OTP ───────────────────────────────────────────
+    // ─── Forgot Password: Generate OTP ───────────────────────────────────────
+
     @PostMapping("/forgot-password/generate-otp")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
-        boolean result = forgotPasswordService.generateAndSendOtp(request.getEmail());
+    public ResponseEntity<ApiResponse<Void>> generateOtp(
+            @RequestBody ForgotPasswordRequest request) {
 
-        if (!result) {
-            return ResponseEntity.status(404).body(
-                    new ApiResponse(false, "Failed to generate OTP", ""));
-        }
+        boolean sent = forgotPasswordService.generateAndSendOtp(request.getEmail());
+        if (!sent)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error("No account found with that email"));
 
-        return ResponseEntity.ok(new ApiResponse(true, "OTP Sent Successfully", ""));
+        return ResponseEntity.ok(ApiResponse.success("OTP sent successfully", null));
     }
 
-    // ─── Forgot Password: Reset ───────────────────────────────────────────────────
+    // ─── Forgot Password: Reset ───────────────────────────────────────────────
+
     @PostMapping("/forgot-password/reset")
-    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
-        boolean result = forgotPasswordService.resetPassword(
-                request.getEmail(),
-                request.getOtp(),
-                request.getNewPassword()
-        );
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
 
-        if (!result) {
-            return ResponseEntity.status(400).body(
-                    new ApiResponse(false, "Password Reset Failed", ""));
-        }
+        boolean reset = forgotPasswordService.resetPassword(
+                request.getEmail(), request.getOtp(), request.getNewPassword());
 
-        return ResponseEntity.ok(new ApiResponse(true, "Password reset successful", ""));
+        if (!reset)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Invalid or expired OTP"));
+
+        return ResponseEntity.ok(ApiResponse.success("Password reset successful", null));
     }
 
-    // ─── Get Current User Profile ─────────────────────────────────────────────────
+    // ─── GET /api/auth/profile ────────────────────────────────────────────────
+
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUserProfile() {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserEmail = auth.getName();
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProfile() {
+        User user = getAuthenticatedUser();
+        if (user == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Unauthorized"));
 
-            System.out.println("Getting profile for: " + currentUserEmail);
-
-            Optional<User> userOpt = userRepository.findByEmail(currentUserEmail);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found"));
-            }
-
-            return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", buildProfileMap(userOpt.get())));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to fetch profile: " + e.getMessage()));
-        }
+        return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", buildProfileMap(user)));
     }
 
-    // ─── Update Current User Profile ──────────────────────────────────────────────
-    // FIX: Each field is updated defensively with a try/catch so that missing
-    // setters on the User entity (e.g. setState, setZipCode) do not cause a 500.
+    // ─── PUT /api/auth/profile ────────────────────────────────────────────────
+
     @PutMapping("/profile")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> updateCurrentUserProfile(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateProfile(
             @RequestBody Map<String, Object> request) {
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserEmail = auth.getName();
 
-            System.out.println("Updating profile for: " + currentUserEmail);
-            System.out.println("Request body: " + request);
+        User user = getAuthenticatedUser();
+        if (user == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Unauthorized"));
 
-            Optional<User> userOpt = userRepository.findByEmail(currentUserEmail);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found"));
-            }
+        // Username is required and cannot be blank
+        if (request.containsKey("username")) {
+            String newUsername = (String) request.get("username");
+            if (newUsername == null || newUsername.isBlank())
+                return ResponseEntity.badRequest().body(ApiResponse.error("Username cannot be blank"));
 
-            User user = userOpt.get();
-
-            // ── Core fields — these setters must exist ────────────────────────────
-            if (request.containsKey("username") && request.get("username") != null) {
-                user.setUsername((String) request.get("username"));
+            // Check uniqueness only if username actually changed
+            if (!newUsername.trim().equals(user.getUsername())
+                    && userRepository.existsByUsername(newUsername.trim())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ApiResponse.error("Username already taken"));
             }
-            if (request.containsKey("phoneNumber") && request.get("phoneNumber") != null) {
-                user.setPhone((String) request.get("phoneNumber"));
-            }
-            if (request.containsKey("address") && request.get("address") != null) {
-                user.setAddress((String) request.get("address"));
-            }
-            if (request.containsKey("city") && request.get("city") != null) {
-                user.setCity((String) request.get("city"));
-            }
-            if (request.containsKey("profileImage") && request.get("profileImage") != null) {
-                user.setProfileImage((String) request.get("profileImage"));
-            }
-
-            // ── Extended fields — guarded so missing setters won't cause 500 ──────
-            if (request.containsKey("state") && request.get("state") != null) {
-                try { user.setState((String) request.get("state")); }
-                catch (Exception ignored) {
-                    System.out.println("WARN: User entity has no setState() — field skipped");
-                }
-            }
-            if (request.containsKey("country") && request.get("country") != null) {
-                try { user.setCountry((String) request.get("country")); }
-                catch (Exception ignored) {
-                    System.out.println("WARN: User entity has no setCountry() — field skipped");
-                }
-            }
-            if (request.containsKey("zipCode") && request.get("zipCode") != null) {
-                try { user.setZipCode((String) request.get("zipCode")); }
-                catch (Exception ignored) {
-                    System.out.println("WARN: User entity has no setZipCode() — field skipped");
-                }
-            }
-
-            if (user.getUpdatedAt() != null || true) {   // always set updatedAt if field exists
-                try { user.setUpdatedAt(LocalDateTime.now()); }
-                catch (Exception ignored) {
-                    System.out.println("WARN: User entity has no setUpdatedAt() — field skipped");
-                }
-            }
-
-            User updatedUser = userRepository.save(user);
-
-            return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", buildProfileMap(updatedUser)));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to update profile: " + e.getMessage()));
+            user.setUsername(newUsername.trim());
         }
+
+        // All other fields: accept null to allow clearing, skip key entirely if not sent
+        if (request.containsKey("phoneNumber"))
+            user.setPhone(nullOrTrimmed(request.get("phoneNumber")));
+
+        if (request.containsKey("address"))
+            user.setAddress(nullOrTrimmed(request.get("address")));
+
+        if (request.containsKey("city"))
+            user.setCity(nullOrTrimmed(request.get("city")));
+
+        if (request.containsKey("state"))
+            user.setState(nullOrTrimmed(request.get("state")));
+
+        if (request.containsKey("country"))
+            user.setCountry(nullOrTrimmed(request.get("country")));
+
+        if (request.containsKey("zipCode"))
+            user.setZipCode(nullOrTrimmed(request.get("zipCode")));
+
+        if (request.containsKey("profileImage"))
+            user.setProfileImage(nullOrTrimmed(request.get("profileImage")));
+
+        User updated = userRepository.save(user);
+        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", buildProfileMap(updated)));
     }
 
-    // ─── Change Password ──────────────────────────────────────────────────────────
+    // ─── PUT /api/auth/profile/change-password ────────────────────────────────
+
     @PutMapping("/profile/change-password")
-    public ResponseEntity<ApiResponse<Void>> changeCurrentUserPassword(
+    public ResponseEntity<ApiResponse<Void>> changePassword(
             @RequestBody Map<String, String> request) {
-        try {
-            String currentPassword = request.get("currentPassword");
-            String newPassword     = request.get("newPassword");
 
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            String currentUserEmail = auth.getName();
+        User user = getAuthenticatedUser();
+        if (user == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Unauthorized"));
 
-            Optional<User> userOpt = userRepository.findByEmail(currentUserEmail);
-            if (userOpt.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body(ApiResponse.error("User not found"));
-            }
+        String currentPassword = request.get("currentPassword");
+        String newPassword     = request.get("newPassword");
 
-            User user = userOpt.get();
+        if (currentPassword == null || newPassword == null)
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Both currentPassword and newPassword are required"));
 
-            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(ApiResponse.error("Current password is incorrect"));
-            }
+        if (newPassword.length() < 6)
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("New password must be at least 6 characters"));
 
-            user.setPassword(passwordEncoder.encode(newPassword));
-            try { user.setUpdatedAt(LocalDateTime.now()); } catch (Exception ignored) {}
-            userRepository.save(user);
+        if (!passwordEncoder.matches(currentPassword, user.getPassword()))
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Current password is incorrect"));
 
-            return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("Failed to change password: " + e.getMessage()));
-        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return ResponseEntity.ok(ApiResponse.success("Password changed successfully", null));
     }
 
-    // ─── Helper: build profile response map safely ────────────────────────────────
-    private Map<String, Object> buildProfileMap(User user) {
-        Map<String, Object> profile = new HashMap<>();
-        profile.put("id",       user.getId());
-        profile.put("email",    user.getEmail());
-        profile.put("username", user.getUsername());
-        profile.put("role",     user.getRole());
+    // ─── DELETE /api/auth/profile ─────────────────────────────────────────────
 
-        // Each optional field is read defensively
-        try { profile.put("phoneNumber",  user.getPhone()); }        catch (Exception e) { profile.put("phoneNumber",  null); }
-        try { profile.put("address",      user.getAddress()); }      catch (Exception e) { profile.put("address",      null); }
-        try { profile.put("city",         user.getCity()); }         catch (Exception e) { profile.put("city",         null); }
-        try { profile.put("state",        user.getState()); }        catch (Exception e) { profile.put("state",        null); }
-        try { profile.put("country",      user.getCountry()); }      catch (Exception e) { profile.put("country",      null); }
-        try { profile.put("zipCode",      user.getZipCode()); }      catch (Exception e) { profile.put("zipCode",      null); }
-        try { profile.put("profileImage", user.getProfileImage()); } catch (Exception e) { profile.put("profileImage", null); }
-        try { profile.put("createdAt",    user.getCreatedAt() != null ? user.getCreatedAt().toString() : null); }
-             catch (Exception e) { profile.put("createdAt", null); }
+    @DeleteMapping("/profile")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount() {
+        User user = getAuthenticatedUser();
+        if (user == null)
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Unauthorized"));
 
-        return profile;
+        userRepository.delete(user);
+        return ResponseEntity.ok(ApiResponse.success("Account permanently deleted", null));
+    }
+
+    // ─── Utility ──────────────────────────────────────────────────────────────
+
+    private String nullOrTrimmed(Object value) {
+        if (value == null) return null;
+        String str = value.toString().trim();
+        return str.isEmpty() ? null : str;
     }
 }
