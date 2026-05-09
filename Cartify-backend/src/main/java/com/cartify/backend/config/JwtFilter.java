@@ -28,22 +28,21 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
-  @Override
-protected boolean shouldNotFilter(HttpServletRequest request) {
-    String path = request.getServletPath();
-    String method = request.getMethod();
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path   = request.getServletPath();
+        String method = request.getMethod();
 
-    if ("OPTIONS".equalsIgnoreCase(method)) return true;
-    
-    return path.equals("/api/auth/login") ||
-           path.equals("/api/auth/register") ||
-           path.equals("/api/auth/forgot-password/generate-otp") ||
-           path.equals("/api/auth/forgot-password/reset") ||
-           path.startsWith("/api/products") ||
-           path.startsWith("/api/public") ||
-           path.startsWith("/api/debug") ||
-           path.startsWith("/h2-console");
-}
+        if ("OPTIONS".equalsIgnoreCase(method)) return true;
+
+        return path.equals("/api/auth/login")
+            || path.equals("/api/auth/register")
+            || path.startsWith("/api/auth/forgot-password")
+            || path.startsWith("/api/products")
+            || path.startsWith("/api/public")
+            || path.startsWith("/api/debug")
+            || path.startsWith("/h2-console");
+    }
 
     @Override
     protected void doFilterInternal(
@@ -55,9 +54,7 @@ protected boolean shouldNotFilter(HttpServletRequest request) {
         final String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Missing or invalid Authorization header\"}");
+            sendError(response, "Missing or invalid Authorization header");
             return;
         }
 
@@ -66,37 +63,51 @@ protected boolean shouldNotFilter(HttpServletRequest request) {
         try {
             String userEmail = jwtUtil.extractEmail(jwt);
 
-            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+            if (userEmail == null) {
+                sendError(response, "Invalid token — no subject found");
+                return;
+            }
+
+            if (SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
                 if (jwtUtil.validateToken(jwt, userEmail)) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                    UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
                             userDetails.getAuthorities()
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        );
+                    authToken.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    // ✅ Fixed: explicitly reject instead of silently falling through
+                    sendError(response, "Token validation failed");
+                    return;
                 }
             }
 
         } catch (ExpiredJwtException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Token expired\"}");
+            sendError(response, "Token expired");
             return;
         } catch (MalformedJwtException | SignatureException e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Invalid token\"}");
+            sendError(response, "Invalid token");
             return;
         } catch (Exception e) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write("{\"error\": \"Authentication failed\"}");
+            // Useful for debugging — remove or replace with a logger in production
+            System.err.println("JWT auth failed: " + e.getClass().getSimpleName() + " — " + e.getMessage());
+            sendError(response, "Authentication failed");
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /** Writes a JSON 401 response and sets the correct content type. */
+    private void sendError(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\": \"" + message + "\"}");
     }
 }
