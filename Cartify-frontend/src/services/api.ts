@@ -81,10 +81,25 @@ const getAuthHeaders = (): HeadersInit => {
   return headers;
 };
 
+// ─── 401 handler — clears stale token and redirects to login ─────────────────
+
+const handleUnauthorized = (): never => {
+  localStorage.removeItem('cartify_currentUser');
+  // Only redirect if not already on the login page to avoid redirect loops
+  if (!window.location.pathname.includes('/login')) {
+    window.location.href = '/login';
+  }
+  throw new Error('Session expired. Please log in again.');
+};
+
 // ─── Generic response handler ─────────────────────────────────────────────────
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  // Try to parse JSON regardless of status so we can surface backend messages
+  // ✅ Handle expired / invalid token globally
+  if (response.status === 401) {
+    return handleUnauthorized();
+  }
+
   let result: any;
   try {
     result = await response.json();
@@ -95,7 +110,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new Error(result?.message || `HTTP ${response.status}: ${response.statusText}`);
+    throw new Error(result?.message || result?.error || `HTTP ${response.status}: ${response.statusText}`);
   }
 
   // ApiResponse wrapper: { success, message, data }
@@ -123,7 +138,7 @@ export const api = {
     const data = await response.json();
 
     if (!response.ok || !data.success)
-      throw new Error(data.message || 'Login failed');
+      throw new Error(data.message || data.error || 'Login failed');
 
     if (data.data)
       localStorage.setItem('cartify_currentUser', JSON.stringify(data.data));
@@ -146,7 +161,6 @@ export const api = {
 
   // ── Profile ───────────────────────────────────────────────────────────────
 
-  /** GET /api/auth/profile — fetch the current user's full profile. */
   async getUserProfile(): Promise<UserProfile> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       method: 'GET',
@@ -155,32 +169,19 @@ export const api = {
     return handleResponse<UserProfile>(response);
   },
 
-  /**
-   * PUT /api/auth/profile — update profile fields.
-   *
-   * FIX: We no longer strip out null / empty-string values.
-   * Sending null explicitly tells the backend to CLEAR that field.
-   * Previously the filter caused cleared fields to be silently dropped,
-   * so the old value stayed in the database forever.
-   */
   async updateUserProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),   // send as-is, nulls included
+      body: JSON.stringify(profileData),
     });
     return handleResponse<UserProfile>(response);
   },
 
-  /**
-   * Convenience wrapper: update only the profile image URL.
-   * Used by the avatar picker in Profile.tsx.
-   */
   async updateProfileImage(imageUrl: string): Promise<UserProfile> {
     return api.updateUserProfile({ profileImage: imageUrl });
   },
 
-  /** PUT /api/auth/profile/change-password */
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     const response = await fetch(`${BASE_URL}/auth/profile/change-password`, {
       method: 'PUT',
@@ -190,11 +191,6 @@ export const api = {
     return handleResponse<void>(response);
   },
 
-  /**
-   * DELETE /api/auth/profile — permanently remove the account.
-   * FIX: This method was missing entirely; the old code called resetPassword()
-   * as a proxy for deletion, which only changed the password — never deleted.
-   */
   async deleteAccount(): Promise<void> {
     const response = await fetch(`${BASE_URL}/auth/profile`, {
       method: 'DELETE',
@@ -250,6 +246,8 @@ export const api = {
       const response = await fetch(`${BASE_URL}/cart/${userId}`, {
         headers: getAuthHeaders(),
       });
+      // ✅ Handle 401 in cart too
+      if (response.status === 401) return handleUnauthorized();
       if (!response.ok) return { items: [], totalItems: 0, totalAmount: 0 };
       const result = await response.json();
       return result.data ?? result;
@@ -314,6 +312,8 @@ export const api = {
       const response = await fetch(`${BASE_URL}/wishlist/${userId}`, {
         headers: getAuthHeaders(),
       });
+      // ✅ Handle 401 in wishlist too
+      if (response.status === 401) return handleUnauthorized();
       if (!response.ok) return [];
       const result = await response.json();
 
@@ -330,13 +330,13 @@ export const api = {
     const userId = getUserId();
     if (!userId) throw new Error('User not logged in');
 
-    // Try to add; if the server returns 409 the item is already there → remove it
     const addResponse = await fetch(`${BASE_URL}/wishlist/add`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ userId, productId }),
     });
 
+    if (addResponse.status === 401) return handleUnauthorized();
     if (addResponse.ok) return { isWishlisted: true };
 
     if (addResponse.status === 409) {
@@ -366,6 +366,7 @@ export const api = {
     });
 
     const result = await response.json();
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok || !result.success)
       throw new Error(result.message || 'Failed to place order');
     return result.data;
@@ -380,6 +381,7 @@ export const api = {
       headers: getAuthHeaders(),
     });
 
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Failed to fetch orders: HTTP ${response.status} — ${text}`);
@@ -413,6 +415,7 @@ export const api = {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/orders`, { headers: getAuthHeaders() });
     const data = await response.json();
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch orders');
     return data.data;
   },
@@ -421,6 +424,7 @@ export const api = {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/orders/stats`, { headers: getAuthHeaders() });
     const data = await response.json();
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch stats');
     return data.data;
   },
@@ -433,6 +437,7 @@ export const api = {
       body: JSON.stringify({ status }),
     });
     const data = await response.json();
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to update order status');
     return data.data;
   },
@@ -441,6 +446,7 @@ export const api = {
     if (!isAdmin()) throw new Error('Unauthorized: Admin access required');
     const response = await fetch(`${BASE_URL}/admin/customers`, { headers: getAuthHeaders() });
     const data = await response.json();
+    if (response.status === 401) return handleUnauthorized();
     if (!response.ok || !data.success) throw new Error(data.message || 'Failed to fetch customers');
     return data.data;
   },
