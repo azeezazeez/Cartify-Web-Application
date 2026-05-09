@@ -26,23 +26,31 @@ public class AuthController {
     @Autowired private ForgotPasswordService forgotPasswordService;
     @Autowired private JwtUtil jwtUtil;
 
-    // ─── Helpers ──────────────────────────────────────────────────────────────
+    // ─── Internal helpers ─────────────────────────────────────────────────────
 
-    /** Returns the authenticated user or throws a 401 response. */
+    /**
+     * Resolves the currently authenticated user from the security context.
+     * Returns null (never throws) if the token is missing or invalid.
+     */
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) return null;
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return null;
+        }
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
-    /** Builds the profile map that is returned to the client. */
+    /**
+     * Builds the profile map returned to the client.
+     * All fields come from Lombok-generated getters — no try/catch needed.
+     */
     private Map<String, Object> buildProfileMap(User user) {
         Map<String, Object> map = new HashMap<>();
         map.put("id",           user.getId());
         map.put("email",        user.getEmail());
         map.put("username",     user.getUsername());
         map.put("role",         user.getRole());
-        map.put("phoneNumber",  user.getPhone());
+        map.put("phoneNumber",  user.getPhone());       // frontend key is "phoneNumber"
         map.put("address",      user.getAddress());
         map.put("city",         user.getCity());
         map.put("state",        user.getState());
@@ -54,7 +62,14 @@ public class AuthController {
         return map;
     }
 
-    // ─── Register ─────────────────────────────────────────────────────────────
+    /** Trims a request value; returns null if blank so the DB field is cleared. */
+    private String nullOrTrimmed(Object value) {
+        if (value == null) return null;
+        String s = value.toString().trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    // ─── POST /api/auth/register ──────────────────────────────────────────────
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, Object>>> register(
@@ -71,11 +86,10 @@ public class AuthController {
         if (password == null || password.length() < 6)
             return ResponseEntity.badRequest().body(ApiResponse.error("Password must be at least 6 characters"));
 
-        if (userRepository.existsByEmail(email))
+        if (userRepository.existsByEmail(email.trim().toLowerCase()))
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error("Email already registered"));
-
-        if (userRepository.existsByUsername(username))
+        if (userRepository.existsByUsername(username.trim()))
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(ApiResponse.error("Username already taken"));
 
@@ -83,8 +97,9 @@ public class AuthController {
         user.setEmail(email.trim().toLowerCase());
         user.setUsername(username.trim());
         user.setPassword(passwordEncoder.encode(password));
-        // First registered user becomes ADMIN, everyone else USER
+        // First ever user becomes ADMIN; everyone else is USER
         user.setRole(userRepository.count() == 0 ? "ADMIN" : "USER");
+        // @PrePersist in User entity sets createdAt / updatedAt automatically
 
         User saved = userRepository.save(user);
         String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole());
@@ -100,7 +115,7 @@ public class AuthController {
                 .body(ApiResponse.success("Registration successful", data));
     }
 
-    // ─── Login ────────────────────────────────────────────────────────────────
+    // ─── POST /api/auth/login ─────────────────────────────────────────────────
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Map<String, Object>>> login(
@@ -110,15 +125,15 @@ public class AuthController {
         String password = request.get("password");
 
         if (email == null || password == null)
-            return ResponseEntity.badRequest().body(ApiResponse.error("Email and password are required"));
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Email and password are required"));
 
         Optional<User> userOpt = userRepository.findByEmail(email.trim().toLowerCase());
 
-        // Use the same message for missing user and wrong password (security best practice)
-        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword())) {
+        // Same error message whether the email is missing or the password is wrong (security)
+        if (userOpt.isEmpty() || !passwordEncoder.matches(password, userOpt.get().getPassword()))
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Invalid email or password"));
-        }
 
         User user = userOpt.get();
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole());
@@ -133,7 +148,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", data));
     }
 
-    // ─── Forgot Password: Generate OTP ───────────────────────────────────────
+    // ─── POST /api/auth/forgot-password/generate-otp ─────────────────────────
 
     @PostMapping("/forgot-password/generate-otp")
     public ResponseEntity<ApiResponse<Void>> generateOtp(
@@ -147,7 +162,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("OTP sent successfully", null));
     }
 
-    // ─── Forgot Password: Reset ───────────────────────────────────────────────
+    // ─── POST /api/auth/forgot-password/reset ────────────────────────────────
 
     @PostMapping("/forgot-password/reset")
     public ResponseEntity<ApiResponse<Void>> resetPassword(
@@ -170,9 +185,10 @@ public class AuthController {
         User user = getAuthenticatedUser();
         if (user == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Unauthorized"));
+                    .body(ApiResponse.error("Unauthorized — please log in"));
 
-        return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", buildProfileMap(user)));
+        return ResponseEntity.ok(
+                ApiResponse.success("Profile fetched successfully", buildProfileMap(user)));
     }
 
     // ─── PUT /api/auth/profile ────────────────────────────────────────────────
@@ -184,47 +200,37 @@ public class AuthController {
         User user = getAuthenticatedUser();
         if (user == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Unauthorized"));
+                    .body(ApiResponse.error("Unauthorized — please log in"));
 
-        // Username is required and cannot be blank
+        // username: required, cannot be blank
         if (request.containsKey("username")) {
-            String newUsername = (String) request.get("username");
-            if (newUsername == null || newUsername.isBlank())
-                return ResponseEntity.badRequest().body(ApiResponse.error("Username cannot be blank"));
+            String newUsername = nullOrTrimmed(request.get("username"));
+            if (newUsername == null)
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Username cannot be blank"));
 
-            // Check uniqueness only if username actually changed
-            if (!newUsername.trim().equals(user.getUsername())
-                    && userRepository.existsByUsername(newUsername.trim())) {
+            // Only check uniqueness if the value actually changed
+            if (!newUsername.equals(user.getUsername())
+                    && userRepository.existsByUsername(newUsername))
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(ApiResponse.error("Username already taken"));
-            }
-            user.setUsername(newUsername.trim());
+
+            user.setUsername(newUsername);
         }
 
-        // All other fields: accept null to allow clearing, skip key entirely if not sent
-        if (request.containsKey("phoneNumber"))
-            user.setPhone(nullOrTrimmed(request.get("phoneNumber")));
-
-        if (request.containsKey("address"))
-            user.setAddress(nullOrTrimmed(request.get("address")));
-
-        if (request.containsKey("city"))
-            user.setCity(nullOrTrimmed(request.get("city")));
-
-        if (request.containsKey("state"))
-            user.setState(nullOrTrimmed(request.get("state")));
-
-        if (request.containsKey("country"))
-            user.setCountry(nullOrTrimmed(request.get("country")));
-
-        if (request.containsKey("zipCode"))
-            user.setZipCode(nullOrTrimmed(request.get("zipCode")));
-
-        if (request.containsKey("profileImage"))
-            user.setProfileImage(nullOrTrimmed(request.get("profileImage")));
+        // All other fields accept null so the client can clear them
+        if (request.containsKey("phoneNumber"))  user.setPhone(nullOrTrimmed(request.get("phoneNumber")));
+        if (request.containsKey("address"))      user.setAddress(nullOrTrimmed(request.get("address")));
+        if (request.containsKey("city"))         user.setCity(nullOrTrimmed(request.get("city")));
+        if (request.containsKey("state"))        user.setState(nullOrTrimmed(request.get("state")));
+        if (request.containsKey("country"))      user.setCountry(nullOrTrimmed(request.get("country")));
+        if (request.containsKey("zipCode"))      user.setZipCode(nullOrTrimmed(request.get("zipCode")));
+        if (request.containsKey("profileImage")) user.setProfileImage(nullOrTrimmed(request.get("profileImage")));
+        // @PreUpdate in User entity updates updatedAt automatically on save
 
         User updated = userRepository.save(user);
-        return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", buildProfileMap(updated)));
+        return ResponseEntity.ok(
+                ApiResponse.success("Profile updated successfully", buildProfileMap(updated)));
     }
 
     // ─── PUT /api/auth/profile/change-password ────────────────────────────────
@@ -236,7 +242,7 @@ public class AuthController {
         User user = getAuthenticatedUser();
         if (user == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Unauthorized"));
+                    .body(ApiResponse.error("Unauthorized — please log in"));
 
         String currentPassword = request.get("currentPassword");
         String newPassword     = request.get("newPassword");
@@ -244,11 +250,9 @@ public class AuthController {
         if (currentPassword == null || newPassword == null)
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Both currentPassword and newPassword are required"));
-
         if (newPassword.length() < 6)
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("New password must be at least 6 characters"));
-
         if (!passwordEncoder.matches(currentPassword, user.getPassword()))
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Current password is incorrect"));
@@ -266,17 +270,9 @@ public class AuthController {
         User user = getAuthenticatedUser();
         if (user == null)
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Unauthorized"));
+                    .body(ApiResponse.error("Unauthorized — please log in"));
 
         userRepository.delete(user);
         return ResponseEntity.ok(ApiResponse.success("Account permanently deleted", null));
-    }
-
-    // ─── Utility ──────────────────────────────────────────────────────────────
-
-    private String nullOrTrimmed(Object value) {
-        if (value == null) return null;
-        String str = value.toString().trim();
-        return str.isEmpty() ? null : str;
     }
 }
