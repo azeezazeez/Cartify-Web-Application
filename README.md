@@ -77,23 +77,14 @@ User → Login → JWT Token → Secured API Requests
 
 ## 📸 Screenshots
 
-### 🏠 Home Page
-![Home Page](https://github.com/user-attachments/assets/11817ea0-8a8e-4239-8815-327b8151c6aa)
-
-### 🛍️ Product Listing
-![Products](https://github.com/user-attachments/assets/2df1bed5-9f63-443d-a88d-0db44373cfe1)
-
-### 📦 Orders Page
-![Cart](https://github.com/user-attachments/assets/e38ed0e2-3bdf-4f6c-9637-1608db3a66e4)
-
-### 🛒 Cart Page
-![Login](https://github.com/user-attachments/assets/e3374499-d59e-4f1e-835c-f0387f48cdaa)
-
-### ❤️ Wishlist Page
-![Orders](https://github.com/user-attachments/assets/d0fd69a8-7d6c-4fec-81f8-cebdfb8c867a)
-
-### 🛠️ Admin Dashboard
-![Admin](https://github.com/user-attachments/assets/7d1cf444-4505-45b5-870c-bb2c9c17bfcc)
+| Section | Preview |
+|---------|---------|
+| **🏠 Home Page** | ![Home Page](https://github.com/user-attachments/assets/11817ea0-8a8e-4239-8815-327b8151c6aa) |
+| **🛍️ Product Listing** | ![Products](https://github.com/user-attachments/assets/2df1bed5-9f63-443d-a88d-0db44373cfe1) |
+| **📦 Orders Page** | ![Cart](https://github.com/user-attachments/assets/e38ed0e2-3bdf-4f6c-9637-1608db3a66e4) |
+| **🛒 Cart Page** | ![Login](https://github.com/user-attachments/assets/e3374499-d59e-4f1e-835c-f0387f48cdaa) |
+| **❤️ Wishlist Page** | ![Orders](https://github.com/user-attachments/assets/d0fd69a8-7d6c-4fec-81f8-cebdfb8c867a) |
+| **🛠️ Admin Dashboard** | ![Admin](https://github.com/user-attachments/assets/7d1cf444-4505-45b5-870c-bb2c9c17bfcc) |
 
 ---
 
