@@ -199,6 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const useWhiteBg = isAdminDashboard || isOrdersPage || isSustainabilityPage || isWishlistPage || isProfilePage;
 
   const getTextColor = () => {
+    if (isAdminDashboard || isOrdersPage) return 'text-gray-900';
     return isScrolled ? 'text-gray-900' : 'text-white';
   };
 
