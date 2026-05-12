@@ -127,12 +127,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 const aValue = a[sortConfig.key as keyof AdminOrder];
                 const bValue = b[sortConfig.key as keyof AdminOrder];
 
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'asc' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'asc' ? 1 : -1;
-                }
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             });
         }
@@ -145,13 +141,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
         return customers.filter(customer => {
             if (!customer) return false;
-
             const searchLower = searchTerm.toLowerCase().trim();
             if (!searchLower) return true;
 
             const name = (customer.name || '').toLowerCase();
             const email = (customer.email || '').toLowerCase();
-
             return name.includes(searchLower) || email.includes(searchLower);
         });
     }, [customers, searchTerm]);
@@ -165,22 +159,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'PENDING': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-            case 'CONFIRMED': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+            case 'PENDING':    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+            case 'CONFIRMED':  return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
             case 'PROCESSING': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
-            case 'SHIPPED': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
-            case 'DELIVERED': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
-            case 'CANCELLED': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
-            default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+            case 'SHIPPED':    return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200';
+            case 'DELIVERED':  return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+            case 'CANCELLED':  return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+            default:           return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
         }
     };
 
-    const formatCurrency = (amount: number) => {
-        return '$' + amount.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    };
+    const formatCurrency = (amount: number) =>
+        '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const formatDate = (dateString: string) => {
         if (!dateString) return 'N/A';
@@ -189,31 +179,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
         });
     };
 
     const handleSort = (key: string) => {
         setSortConfig(current => {
             if (current?.key === key) {
-                if (current.direction === 'asc') {
-                    return { key, direction: 'desc' };
-                }
+                if (current.direction === 'asc') return { key, direction: 'desc' };
                 return null;
             }
             return { key, direction: 'asc' };
         });
     };
 
-    const clearSearch = () => {
-        setSearchTerm('');
-        setStatusFilter('all');
-        setCurrentPage(1);
-    };
-
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center pt-20">
+            <div className="min-h-screen flex items-center justify-center pt-20 bg-white dark:bg-brand-950">
                 <div className="text-center">
                     <RefreshCw className="w-12 h-12 animate-spin text-brand-600 mx-auto mb-4" />
                     <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
@@ -223,9 +205,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     }
 
     return (
-        <div className="min-h-screen bg-white pt-20">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-20 z-10">
+        /*
+         * KEY FIX:
+         * - `bg-white` ensures the page background is always white in light mode.
+         * - `dark:bg-brand-950` keeps the dark-mode experience intact.
+         * - Because the Navbar now detects `/admin` via `isAdminDashboard`, it will
+         *   always render with a white background + black nav-link text on this page.
+         */
+        <div className="min-h-screen bg-white dark:bg-brand-950 pt-20">
+
+            {/* ── Sticky Header ── */}
+            <div className="bg-white dark:bg-brand-950 border-b border-gray-200 dark:border-brand-800 sticky top-20 z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex items-center justify-between">
                         <div>
@@ -256,9 +246,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                     {/* Navigation Tabs */}
                     <div className="flex space-x-6 mt-6">
                         {[
-                            { id: 'overview', label: 'Overview', icon: TrendingUp },
-                            { id: 'orders', label: 'Orders', icon: ShoppingBag },
-                            { id: 'customers', label: 'Customers', icon: Users },
+                            { id: 'overview',   label: 'Overview',   icon: TrendingUp  },
+                            { id: 'orders',     label: 'Orders',     icon: ShoppingBag },
+                            { id: 'customers',  label: 'Customers',  icon: Users       },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -268,10 +258,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     setStatusFilter('all');
                                     setCurrentPage(1);
                                 }}
-                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${activeTab === tab.id
-                                    ? 'bg-brand-600 text-white'
-                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-brand-800'
-                                    }`}
+                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                                    activeTab === tab.id
+                                        ? 'bg-brand-600 text-white'
+                                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-brand-800'
+                                }`}
                             >
                                 <tab.icon className="w-4 h-4" />
                                 <span className="font-medium">{tab.label}</span>
@@ -281,13 +272,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {/* ── Main Content ── */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
                 {/* Overview Tab */}
                 {activeTab === 'overview' && stats && (
                     <div className="space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                            {/* Total Orders */}
+                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Total Orders</p>
@@ -301,7 +294,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 </div>
                             </div>
 
-                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                            {/* Total Revenue */}
+                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Total Revenue</p>
@@ -315,7 +309,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 </div>
                             </div>
 
-                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                            {/* Total Customers */}
+                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Total Customers</p>
@@ -329,7 +324,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                 </div>
                             </div>
 
-                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                            {/* Pending Orders */}
+                            <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <p className="text-sm text-gray-600 dark:text-gray-400">Pending Orders</p>
@@ -350,7 +346,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {activeTab === 'orders' && (
                     <div className="space-y-6">
                         {/* Search and Filter */}
-                        <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                        <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -362,7 +358,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                             setSearchTerm(e.target.value);
                                             setCurrentPage(1);
                                         }}
-                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-brand-800 dark:text-white"
+                                        className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-brand-800 text-gray-900 dark:text-white"
                                     />
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -373,7 +369,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                             setStatusFilter(e.target.value);
                                             setCurrentPage(1);
                                         }}
-                                        className="px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-brand-800 dark:text-white"
+                                        className="px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-brand-800 text-gray-900 dark:text-white"
                                     >
                                         <option value="all">All Status</option>
                                         <option value="PENDING">Pending</option>
@@ -388,7 +384,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         </div>
 
                         {/* Orders Table */}
-                        <div className="bg-white dark:bg-brand-900 rounded-xl shadow-sm overflow-hidden">
+                        <div className="bg-white dark:bg-brand-900 rounded-xl shadow-sm border border-gray-100 dark:border-brand-800 overflow-hidden">
                             {filteredOrders.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -404,32 +400,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                         <table className="w-full">
                                             <thead className="bg-gray-50 dark:bg-brand-800">
                                                 <tr>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                                    {['Order ID', 'Customer', 'Date', 'Amount', 'Status', 'Actions'].map(h => (
+                                                        <th
+                                                            key={h}
+                                                            className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                                                        >
+                                                            {h}
+                                                        </th>
+                                                    ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-gray-200 dark:divide-brand-700">
                                                 {paginatedOrders.map((order) => (
-                                                    <tr key={order.orderId} className="hover:bg-gray-50 dark:hover:bg-brand-800">
+                                                    <tr
+                                                        key={order.orderId}
+                                                        className="hover:bg-gray-50 dark:hover:bg-brand-800 transition-colors"
+                                                    >
                                                         <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                                             #{order.orderId?.slice(0, 8)}
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{order.customerName}</p>
-                                                            <p className="text-xs text-gray-500">{order.customerEmail}</p>
+                                                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {order.customerName}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {order.customerEmail}
+                                                            </p>
                                                         </td>
-                                                        <td className="px-6 py-4 text-sm text-gray-600">{formatDate(order.orderDate)}</td>
-                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatCurrency(order.totalAmount)}</td>
+                                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                            {formatDate(order.orderDate)}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                            {formatCurrency(order.totalAmount)}
+                                                        </td>
                                                         <td className="px-6 py-4">
                                                             <select
                                                                 value={order.status}
-                                                                onChange={(e) => handleUpdateOrderStatus(order.orderId, e.target.value)}
+                                                                onChange={(e) =>
+                                                                    handleUpdateOrderStatus(order.orderId, e.target.value)
+                                                                }
                                                                 disabled={updatingStatus === order.orderId}
-                                                                className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-offset-2 ${getStatusColor(order.status)}`}
+                                                                className={`px-2 py-1 text-xs font-medium rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${getStatusColor(order.status)}`}
                                                             >
                                                                 <option value="PENDING">Pending</option>
                                                                 <option value="CONFIRMED">Confirmed</option>
@@ -445,7 +456,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                                     setSelectedOrder(order);
                                                                     setShowOrderDetails(true);
                                                                 }}
-                                                                className="text-brand-600 hover:text-brand-700 text-sm flex items-center space-x-1"
+                                                                className="text-brand-600 hover:text-brand-700 text-sm flex items-center space-x-1 transition-colors"
                                                             >
                                                                 <Eye className="w-4 h-4" />
                                                                 <span>View</span>
@@ -460,19 +471,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     {/* Pagination */}
                                     {totalPages > 1 && (
                                         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-brand-700">
-                                            <div className="text-sm text-gray-600">Page {currentPage} of {totalPages}</div>
+                                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                                Page {currentPage} of {totalPages}
+                                            </div>
                                             <div className="flex space-x-2">
                                                 <button
                                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                                     disabled={currentPage === 1}
-                                                    className="px-3 py-1 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                                                    className="px-3 py-1 border border-gray-200 dark:border-brand-700 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-brand-800 text-gray-700 dark:text-gray-300 transition-colors"
                                                 >
                                                     Previous
                                                 </button>
                                                 <button
                                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                                     disabled={currentPage === totalPages}
-                                                    className="px-3 py-1 border rounded-lg disabled:opacity-50 hover:bg-gray-50"
+                                                    className="px-3 py-1 border border-gray-200 dark:border-brand-700 rounded-lg disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-brand-800 text-gray-700 dark:text-gray-300 transition-colors"
                                                 >
                                                     Next
                                                 </button>
@@ -488,7 +501,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 {/* Customers Tab */}
                 {activeTab === 'customers' && (
                     <div className="space-y-6">
-                        <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm">
+                        <div className="bg-white dark:bg-brand-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-brand-800">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
@@ -496,12 +509,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     placeholder="Search customers by name or email..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-brand-800 dark:text-white"
+                                    className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-brand-800 text-gray-900 dark:text-white"
                                 />
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-brand-900 rounded-xl shadow-sm overflow-hidden">
+                        <div className="bg-white dark:bg-brand-900 rounded-xl shadow-sm border border-gray-100 dark:border-brand-800 overflow-hidden">
                             {filteredCustomers.length === 0 ? (
                                 <div className="text-center py-12">
                                     <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -514,24 +527,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     <table className="w-full">
                                         <thead className="bg-gray-50 dark:bg-brand-800">
                                             <tr>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined Date</th>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Orders</th>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Spent</th>
-                                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                                {['Customer', 'Email', 'Joined Date', 'Total Orders', 'Total Spent', 'Role'].map(h => (
+                                                    <th
+                                                        key={h}
+                                                        className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                                                    >
+                                                        {h}
+                                                    </th>
+                                                ))}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200 dark:divide-brand-700">
                                             {filteredCustomers.map((customer) => (
-                                                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-brand-800">
-                                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{customer.name}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-600">{customer.email}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-600">{customer.joinedDate?.slice(0, 10)}</td>
-                                                    <td className="px-6 py-4 text-sm text-gray-600">{customer.totalOrders || 0}</td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{formatCurrency(customer.totalSpent || 0)}</td>
+                                                <tr
+                                                    key={customer.id}
+                                                    className="hover:bg-gray-50 dark:hover:bg-brand-800 transition-colors"
+                                                >
+                                                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        {customer.name}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        {customer.email}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        {customer.joinedDate?.slice(0, 10)}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
+                                                        {customer.totalOrders || 0}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                                        {formatCurrency(customer.totalSpent || 0)}
+                                                    </td>
                                                     <td className="px-6 py-4">
-                                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                                                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-brand-800 text-gray-800 dark:text-gray-200">
                                                             {customer.role}
                                                         </span>
                                                     </td>
@@ -546,17 +574,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                 )}
             </div>
 
-            {/* Order Details Modal */}
+            {/* ── Order Details Modal ── */}
             <AnimatePresence>
                 {showOrderDetails && selectedOrder && (
                     <div className="fixed inset-0 z-50 overflow-y-auto">
                         <div className="flex items-center justify-center min-h-screen px-4">
-                            <div className="fixed inset-0 bg-black/50" onClick={() => setShowOrderDetails(false)} />
+                            <div
+                                className="fixed inset-0 bg-black/50"
+                                onClick={() => setShowOrderDetails(false)}
+                            />
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="relative bg-white dark:bg-brand-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 z-50"
+                                className="relative bg-white dark:bg-brand-900 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 z-50 shadow-2xl"
                             >
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-white">
@@ -564,31 +595,48 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                     </h2>
                                     <button
                                         onClick={() => setShowOrderDetails(false)}
-                                        className="p-2 hover:bg-gray-100 dark:hover:bg-brand-800 rounded-lg"
+                                        className="p-2 hover:bg-gray-100 dark:hover:bg-brand-800 rounded-lg transition-colors"
                                     >
-                                        <X className="w-5 h-5" />
+                                        <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                                     </button>
                                 </div>
 
                                 <div className="space-y-6">
                                     {/* Customer Info */}
                                     <div className="bg-gray-50 dark:bg-brand-800 rounded-lg p-4">
-                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Customer Information</h3>
-                                        <p className="text-gray-600 dark:text-gray-300">Name: {selectedOrder.customerName}</p>
-                                        <p className="text-gray-600 dark:text-gray-300">Email: {selectedOrder.customerEmail}</p>
-                                        <p className="text-gray-600 dark:text-gray-300">Shipping Address: {selectedOrder.shippingAddress || 'Not provided'}</p>
+                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                                            Customer Information
+                                        </h3>
+                                        <p className="text-gray-600 dark:text-gray-300">
+                                            Name: {selectedOrder.customerName}
+                                        </p>
+                                        <p className="text-gray-600 dark:text-gray-300">
+                                            Email: {selectedOrder.customerEmail}
+                                        </p>
+                                        <p className="text-gray-600 dark:text-gray-300">
+                                            Shipping Address: {selectedOrder.shippingAddress || 'Not provided'}
+                                        </p>
                                     </div>
 
                                     {/* Order Items */}
                                     <div>
-                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Order Items</h3>
+                                        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
+                                            Order Items
+                                        </h3>
                                         <div className="space-y-3">
                                             {selectedOrder.items && selectedOrder.items.length > 0 ? (
                                                 selectedOrder.items.map((item, index) => (
-                                                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-brand-700">
+                                                    <div
+                                                        key={index}
+                                                        className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-brand-700"
+                                                    >
                                                         <div>
-                                                            <p className="font-medium text-gray-900 dark:text-white">{item.productName}</p>
-                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Quantity: {item.quantity} x {formatCurrency(item.price)}</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">
+                                                                {item.productName}
+                                                            </p>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                                                Quantity: {item.quantity} × {formatCurrency(item.price)}
+                                                            </p>
                                                         </div>
                                                         <p className="font-medium text-gray-900 dark:text-white">
                                                             {formatCurrency(item.price * item.quantity)}
@@ -596,7 +644,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                     </div>
                                                 ))
                                             ) : (
-                                                <p className="text-gray-500">No items found</p>
+                                                <p className="text-gray-500 dark:text-gray-400">No items found</p>
                                             )}
                                         </div>
                                     </div>
@@ -632,7 +680,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                                                 handleUpdateOrderStatus(selectedOrder.orderId, e.target.value);
                                                 setSelectedOrder({ ...selectedOrder, status: e.target.value });
                                             }}
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-brand-800 dark:text-white"
+                                            className="w-full px-4 py-2 border border-gray-200 dark:border-brand-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-brand-800 text-gray-900 dark:text-white"
                                         >
                                             <option value="PENDING">Pending</option>
                                             <option value="CONFIRMED">Confirmed</option>
