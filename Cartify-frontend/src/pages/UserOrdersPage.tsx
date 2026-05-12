@@ -1,537 +1,701 @@
-// pages/UserOrdersPage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingBag, Search, Menu, X, User, Heart, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import {
-    Package, Calendar, Truck, CheckCircle, Clock,
-    AlertCircle, ChevronRight, Search, Filter, X, ShoppingBag
-} from 'lucide-react';
-import { api } from '../services/api';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { cn } from '../lib/utils';
 
-interface OrderItem {
-    productId: string;
-    productName: string;
-    price: number;
-    quantity: number;
-    subtotal: number;
+interface UserType {
+  email: string;
+  name?: string;
+  id?: string;
 }
 
-interface Order {
-    orderId: string;
-    orderDate: string;
-    totalAmount: number;
-    status: string;
-    items: OrderItem[];
+interface NavbarProps {
+  cartCount: number;
+  wishlistCount: number;
+  onCartClick: () => void;
+  onWishlistClick: () => void;
+  onAuthClick: () => void;
+  onLogout: () => void;
+  user: UserType | null;
+  isDark: boolean;
+  toggleTheme: () => void;
+  showToast: (text: string, type?: 'success' | 'info') => void;
+  onSearch: (query: string) => void;
+  onShopClick: () => void;
 }
 
-interface UserOrdersPageProps {
-    isDark?: boolean;
-}
+export const Navbar: React.FC<NavbarProps> = ({
+  cartCount,
+  wishlistCount,
+  onCartClick,
+  onWishlistClick,
+  onAuthClick,
+  onLogout,
+  user,
+  isDark,
+  toggleTheme,
+  showToast,
+  onSearch,
+  onShopClick
+}) => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isPastProductsSection, setIsPastProductsSection] = useState(false);
+  const navbarRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-export const UserOrdersPage = ({ isDark = false }: UserOrdersPageProps) => {
-    const [orders, setOrders] = useState<Order[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-    const [filterStatus, setFilterStatus] = useState<string>('all');
-    const [searchQuery, setSearchQuery] = useState('');
-    const navigate = useNavigate();
+  // Route checks
+  const isAdminDashboard = location.pathname.includes('/admin');
+  const isOrdersPage = location.pathname === '/my-orders';
+  const isSustainabilityPage = location.pathname === '/sustainability';
+  const isWishlistPage = location.pathname === '/wishlist';
+  const isProfilePage = location.pathname === '/profile';
 
-    // ─── Theme tokens ─────────────────────────────────────────────────────────
-    // isDark = true  → app is in dark mode  → dark bg, light text
-    // isDark = false → app is in light mode → white bg, dark text  ← DEFAULT
-    //
-    // BUG FIX: all ternaries were previously inverted (dark got light styles
-    // and light got dark styles). Corrected below.
-    // ─────────────────────────────────────────────────────────────────────────
-
-    const pageBg       = isDark ? 'bg-gray-950'  : 'bg-white';
-    const cardBg       = isDark ? 'bg-gray-900'  : 'bg-white';
-    const cardBorder   = isDark ? 'border-gray-800' : 'border-gray-100';
-    const textPrimary  = isDark ? 'text-white'   : 'text-gray-900';
-    const textSecondary = isDark ? 'text-gray-300' : 'text-gray-600';
-    const textMuted    = isDark ? 'text-gray-500' : 'text-gray-400';
-
-    const inputBg  = isDark
-        ? 'bg-gray-800 border-gray-700 focus:border-white'
-        : 'bg-gray-50 border-gray-200 focus:border-gray-900';
-    const inputText = isDark ? 'text-white'     : 'text-gray-900';
-
-    const selectBg = isDark
-        ? 'bg-gray-800 border-gray-700 focus:border-white text-white'
-        : 'bg-gray-50 border-gray-200 focus:border-gray-900 text-gray-900';
-
-    const sectionBg   = isDark ? 'bg-gray-800/50' : 'bg-gray-50';
-    const iconBg      = isDark ? 'bg-gray-800'    : 'bg-gray-100';
-    const iconText    = isDark ? 'text-gray-400'  : 'text-gray-600';
-    const emptyIcon   = isDark ? 'text-gray-700'  : 'text-gray-200';
-
-    const btnPrimary = isDark
-        ? 'bg-white text-gray-900 hover:bg-gray-100'
-        : 'bg-gray-900 text-white hover:bg-gray-800';
-    const btnOutline = isDark
-        ? 'border border-gray-700 text-white hover:bg-gray-800'
-        : 'border border-gray-200 text-gray-900 hover:bg-gray-50';
-    const viewDetailsTxt = isDark
-        ? 'text-gray-400 hover:text-white'
-        : 'text-gray-600 hover:text-gray-900';
-
-    // Status badge colors
-    const getStatusColor = (status: string) => {
-        switch ((status || '').toUpperCase()) {
-            case 'DELIVERED':
-                return isDark
-                    ? 'bg-green-900/20 text-green-400 border border-green-800/50'
-                    : 'bg-green-100 text-green-800';
-            case 'SHIPPED':
-                return isDark
-                    ? 'bg-blue-900/20 text-blue-400 border border-blue-800/50'
-                    : 'bg-blue-100 text-blue-800';
-            case 'PROCESSING':
-                return isDark
-                    ? 'bg-yellow-900/20 text-yellow-400 border border-yellow-800/50'
-                    : 'bg-yellow-100 text-yellow-800';
-            case 'PENDING':
-                return isDark
-                    ? 'bg-orange-900/20 text-orange-400 border border-orange-800/50'
-                    : 'bg-orange-100 text-orange-800';
-            case 'CANCELLED':
-                return isDark
-                    ? 'bg-red-900/20 text-red-400 border border-red-800/50'
-                    : 'bg-red-100 text-red-800';
-            default:
-                return isDark
-                    ? 'bg-gray-800/50 text-gray-400 border border-gray-700'
-                    : 'bg-gray-100 text-gray-800';
-        }
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 100;
+      setIsScrolled(scrolled);
+      setIsPastProductsSection(scrolled);
     };
 
-    useEffect(() => { fetchOrders(); }, []);
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
 
-    const fetchOrders = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const userStr = localStorage.getItem('cartify_currentUser');
-            if (!userStr) {
-                setError('Please log in to view your orders.');
-                setOrders([]);
-                return;
-            }
-            const data = await api.getOrderHistory();
-            setOrders(Array.isArray(data) ? data : []);
-        } catch (error: any) {
-            setError(error?.message || 'Failed to load orders. Please try again.');
-            setOrders([]);
-        } finally {
-            setIsLoading(false);
-        }
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
     };
 
-    const getStatusIcon = (status: string) => {
-        switch ((status || '').toUpperCase()) {
-            case 'DELIVERED':  return <CheckCircle  className="w-4 h-4" />;
-            case 'SHIPPED':    return <Truck        className="w-4 h-4" />;
-            case 'PROCESSING': return <Package      className="w-4 h-4" />;
-            case 'PENDING':    return <Clock        className="w-4 h-4" />;
-            case 'CANCELLED':  return <X            className="w-4 h-4" />;
-            default:           return <AlertCircle  className="w-4 h-4" />;
-        }
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobileMenuOpen]);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     };
 
-    const formatDate = (dateString: string) => {
-        if (!dateString) return 'Date not available';
-        try {
-            return new Intl.DateTimeFormat('en-US', {
-                year: 'numeric', month: 'long', day: 'numeric',
-            }).format(new Date(dateString));
-        } catch { return dateString; }
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isUserMenuOpen) {
+        setIsUserMenuOpen(false);
+      }
     };
 
-    const formatCurrency = (amount: number) => {
-        if (amount == null || isNaN(amount)) return '$0.00';
-        return '$' + Number(amount).toFixed(2);
-    };
-
-    const filteredOrders = orders.filter(order => {
-        const matchesStatus =
-            filterStatus === 'all' ||
-            (order.status || '').toUpperCase() === filterStatus.toUpperCase();
-        const matchesSearch =
-            !searchQuery ||
-            order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (order.items || []).some(item =>
-                (item.productName || '').toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        return matchesStatus && matchesSearch;
-    });
-
-    // ─── Loading ──────────────────────────────────────────────────────────────
-    if (isLoading) {
-        return (
-            <div className={`min-h-screen pt-24 flex items-center justify-center ${pageBg}`}>
-                <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-center"
-                >
-                    <div className={`w-16 h-16 border-4 rounded-full animate-spin mx-auto mb-4 ${
-                        isDark
-                            ? 'border-gray-700 border-t-white'
-                            : 'border-gray-200 border-t-gray-900'
-                    }`} />
-                    <p className={textSecondary}>Loading your orders...</p>
-                </motion.div>
-            </div>
-        );
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscKey);
     }
 
-    // ─── Error ────────────────────────────────────────────────────────────────
-    if (error) {
-        return (
-            <div className={`min-h-screen pt-24 flex items-center justify-center ${pageBg}`}>
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-center max-w-md mx-auto px-4"
-                >
-                    <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                    <h3 className={`text-xl font-bold mb-2 ${textPrimary}`}>Something went wrong</h3>
-                    <p className={`mb-6 ${textSecondary}`}>{error}</p>
-                    <div className="flex gap-3 justify-center">
-                        <button
-                            onClick={fetchOrders}
-                            className={`px-6 py-3 rounded-xl font-medium transition-colors ${btnPrimary}`}
-                        >
-                            Try Again
-                        </button>
-                        <button
-                            onClick={() => navigate('/')}
-                            className={`px-6 py-3 rounded-xl font-medium transition-colors ${btnOutline}`}
-                        >
-                            Go Home
-                        </button>
-                    </div>
-                </motion.div>
-            </div>
-        );
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
+    };
+  }, [isUserMenuOpen]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+    onSearch(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchValue('');
+    onSearch('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchOpen(!isSearchOpen);
+    if (isSearchOpen) {
+      setSearchValue('');
+      onSearch('');
+    }
+  };
+
+  const handleLinkClick = (e: React.MouseEvent, label: string) => {
+    e.preventDefault();
+    setIsMobileMenuOpen(false);
+    setIsUserMenuOpen(false);
+
+    if (label === 'Shop' || label === 'Shop All') {
+      navigate('/');
+      setTimeout(onShopClick, 100);
+    } else if (label === 'New Arrivals') {
+      navigate('/new-arrivals');
+    } else if (label === 'Sustainability') {
+      navigate('/sustainability');
+    } else if (label === 'About' || label === 'Our Story') {
+      navigate('/');
+      setTimeout(() => {
+        const footer = document.querySelector('footer');
+        footer?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      showToast(`${label} page is coming soon!`);
+    }
+  };
+
+  const handleMobileSearchClick = () => {
+    setIsMobileMenuOpen(false);
+    setIsSearchOpen(true);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchValue.trim()) {
+      onSearch(searchValue.trim());
+
+      setTimeout(() => {
+        const productsSection =
+          document.querySelector('[data-products]') ||
+          document.querySelector('.products-grid') ||
+          document.querySelector('.product-grid') ||
+          document.querySelector('section:nth-of-type(2)');
+
+        if (productsSection) {
+          productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  };
+
+  // Always use dark text on white background
+  const useDarkText = true;
+  const useWhiteBg = true;
+
+  const getTextColor = () => 'text-gray-900';
+  const getLogoColor = () => 'text-gray-900';
+  const getButtonHoverColor = () => 'hover:bg-gray-100';
+  const getIconColor = () => 'text-gray-900';
+  const getSearchBgColor = () => 'bg-gray-100';
+  const getSearchTextColor = () => 'text-gray-900';
+  const getSearchPlaceholderColor = () => 'placeholder-gray-500';
+
+  const textColor = getTextColor();
+  const logoColor = getLogoColor();
+  const hoverColor = 'hover:text-gray-600';
+  const buttonBgHover = getButtonHoverColor();
+  const searchBgColor = getSearchBgColor();
+  const searchTextColor = getSearchTextColor();
+  const searchPlaceholderColor = getSearchPlaceholderColor();
+  const iconColor = getIconColor();
+
+  const getToggleButtonColor = () => {
+    if (isMobileMenuOpen) return 'text-gray-900';
+    return 'text-gray-900';
+  };
+
+  // Function to get user initials from profile settings
+  const getUserInitials = () => {
+    if (!user) return '?';
+
+    if (user.name) {
+      const nameParts = user.name.trim().split(' ');
+      if (nameParts.length >= 2) {
+        return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+      }
+      return user.name.substring(0, 2).toUpperCase();
     }
 
-    // ─── Main ─────────────────────────────────────────────────────────────────
+    if (user.email) {
+      const emailParts = user.email.split('@')[0];
+      return emailParts.substring(0, 2).toUpperCase();
+    }
+
+    return 'U';
+  };
+
+  // Generate consistent gradient based on user email for personalized look
+  const getUserGradient = () => {
+    if (!user?.email) return 'from-gray-600 to-gray-800';
+
+    const emailHash = user.email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const gradients = [
+      'from-purple-600 to-pink-600',
+      'from-blue-600 to-cyan-600',
+      'from-green-600 to-emerald-600',
+      'from-orange-600 to-red-600',
+      'from-indigo-600 to-purple-600',
+      'from-rose-600 to-orange-600',
+      'from-teal-600 to-green-600',
+      'from-violet-600 to-fuchsia-600'
+    ];
+
+    return gradients[emailHash % gradients.length];
+  };
+
+  // Lettered Avatar Component
+  const LetteredAvatar = ({ initials, gradient }: { initials: string; gradient: string }) => {
     return (
-        <div className={`min-h-screen pt-24 pb-12 ${pageBg}`}>
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
-                >
-                    <h1 className={`text-3xl font-serif font-bold ${textPrimary}`}>My Orders</h1>
-                    <p className={`mt-2 ${textSecondary}`}>
-                        {orders.length} order{orders.length !== 1 ? 's' : ''} placed
-                    </p>
-                </motion.div>
-
-                {/* Filters */}
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className={`rounded-2xl p-6 shadow-sm mb-6 border ${cardBg} ${cardBorder}`}
-                >
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search by order ID or product name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className={`w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none transition-colors ${inputBg} ${inputText}`}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                            <select
-                                value={filterStatus}
-                                onChange={(e) => setFilterStatus(e.target.value)}
-                                className={`px-4 py-2.5 border rounded-xl text-sm focus:outline-none transition-colors ${selectBg}`}
-                            >
-                                <option value="all">All Orders</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="PROCESSING">Processing</option>
-                                <option value="SHIPPED">Shipped</option>
-                                <option value="DELIVERED">Delivered</option>
-                                <option value="CANCELLED">Cancelled</option>
-                            </select>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Empty state */}
-                {filteredOrders.length === 0 ? (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className={`rounded-2xl p-16 text-center shadow-sm border ${cardBg} ${cardBorder}`}
-                    >
-                        <ShoppingBag className={`w-16 h-16 mx-auto mb-4 ${emptyIcon}`} />
-                        <h3 className={`text-xl font-serif font-bold mb-2 ${textPrimary}`}>
-                            {searchQuery || filterStatus !== 'all'
-                                ? 'No orders match your filters'
-                                : "You haven't placed any orders yet"}
-                        </h3>
-                        <p className={`mb-6 text-sm ${textSecondary}`}>
-                            {searchQuery || filterStatus !== 'all'
-                                ? 'Try adjusting your search or filter'
-                                : 'When you place an order, it will appear here'}
-                        </p>
-                        {!searchQuery && filterStatus === 'all' && (
-                            <button
-                                onClick={() => navigate('/')}
-                                className={`px-6 py-3 rounded-xl font-medium transition-colors ${btnPrimary}`}
-                            >
-                                Start Shopping
-                            </button>
-                        )}
-                    </motion.div>
-                ) : (
-                    <div className="space-y-4">
-                        {filteredOrders.map((order, index) => (
-                            <motion.div
-                                key={order.orderId}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                className={`rounded-2xl shadow-sm overflow-hidden border ${cardBg} ${cardBorder}`}
-                            >
-                                {/* Order Header */}
-                                <div className={`p-6 border-b ${cardBorder}`}>
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-2.5 rounded-xl ${iconBg}`}>
-                                                <Package className={`w-5 h-5 ${iconText}`} />
-                                            </div>
-                                            <div>
-                                                <p className={`text-xs uppercase tracking-wide ${textMuted}`}>Order ID</p>
-                                                <p className={`font-mono font-semibold text-sm ${textPrimary}`}>
-                                                    {order.orderId}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-wrap items-center gap-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <Calendar className={`w-3.5 h-3.5 ${textMuted}`} />
-                                                <span className={`text-sm ${textSecondary}`}>
-                                                    {formatDate(order.orderDate)}
-                                                </span>
-                                            </div>
-                                            <span className={`text-sm font-semibold ${textPrimary}`}>
-                                                {formatCurrency(order.totalAmount)}
-                                            </span>
-                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                                                {getStatusIcon(order.status)}
-                                                <span className="capitalize">
-                                                    {(order.status || '').toLowerCase()}
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Order Items */}
-                                <div className="p-6">
-                                    <div className="space-y-3">
-                                        {(order.items || []).map((item, idx) => (
-                                            <div key={idx} className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                                                    <Package className={`w-5 h-5 ${iconText}`} />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`font-medium text-sm truncate ${textPrimary}`}>
-                                                        {item.productName}
-                                                    </p>
-                                                    <p className={`text-xs mt-0.5 ${textMuted}`}>
-                                                        {formatCurrency(item.price)} × {item.quantity}
-                                                    </p>
-                                                </div>
-                                                <p className={`font-medium text-sm flex-shrink-0 ${textPrimary}`}>
-                                                    {formatCurrency(item.subtotal)}
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className={`mt-4 pt-4 border-t flex items-center justify-between ${cardBorder}`}>
-                                        <p className={`text-sm ${textMuted}`}>
-                                            {(order.items || []).length} item{(order.items || []).length !== 1 ? 's' : ''}
-                                        </p>
-                                        <div className="text-right">
-                                            <p className={`text-xs ${textMuted}`}>Order Total</p>
-                                            <p className={`text-lg font-bold ${textPrimary}`}>
-                                                {formatCurrency(order.totalAmount)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Footer */}
-                                <div className={`px-6 py-4 flex justify-end ${sectionBg}`}>
-                                    <button
-                                        onClick={() => setSelectedOrder(order)}
-                                        className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${viewDetailsTxt}`}
-                                    >
-                                        View Details <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {/* Details Modal */}
-            <AnimatePresence>
-                {selectedOrder && (
-                    <OrderDetailsModal
-                        order={selectedOrder}
-                        onClose={() => setSelectedOrder(null)}
-                        formatDate={formatDate}
-                        getStatusColor={getStatusColor}
-                        getStatusIcon={getStatusIcon}
-                        formatCurrency={formatCurrency}
-                        isDark={isDark}
-                    />
-                )}
-            </AnimatePresence>
+      <div className="relative group">
+        <div className={cn(
+          "w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br shadow-lg ring-2 ring-white/50 flex items-center justify-center transition-all duration-300",
+          gradient,
+          "hover:scale-105 hover:shadow-xl cursor-pointer"
+        )}>
+          <span className="text-white font-bold text-sm sm:text-base tracking-wide">
+            {initials}
+          </span>
         </div>
+        {/* Animated ring effect */}
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-md"></div>
+      </div>
     );
-};
+  };
 
-// ─── Order Details Modal ──────────────────────────────────────────────────────
+  // Mobile menu classes - white background only
+  const mobileBg = 'bg-white';
+  const mobileBorder = 'border-gray-200';
+  const mobileText = 'text-gray-900';
+  const mobileSubText = 'text-gray-500';
+  const mobileHover = 'hover:text-gray-600 hover:bg-gray-50';
+  const mobileUserBg = 'bg-gray-50';
+  const mobileCloseBtn = 'text-gray-700 hover:bg-gray-100';
 
-interface OrderDetailsModalProps {
-    order: Order;
-    onClose: () => void;
-    formatDate: (date: string) => string;
-    getStatusColor: (status: string) => string;
-    getStatusIcon: (status: string) => React.ReactNode;
-    formatCurrency: (amount: number) => string;
-    isDark: boolean;
-}
+  return (
+    <nav
+      ref={navbarRef}
+      className={cn(
+        'fixed top-0 left-0 right-0 z-50 px-4 sm:px-6',
+        'h-16 sm:h-20 flex items-center',
+        'bg-white shadow-md',
+        'overflow-visible shrink-0'
+      )}
+    >
+      <div className="max-w-7xl mx-auto w-full flex items-center justify-between h-full">
+        {/* Mobile Menu Toggle */}
+        <button
+          className={cn(
+            "lg:hidden p-2 rounded-full transition-colors",
+            buttonBgHover,
+            getToggleButtonColor()
+          )}
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+        </button>
 
-const OrderDetailsModal = ({
-    order, onClose, formatDate, getStatusColor, getStatusIcon, formatCurrency, isDark,
-}: OrderDetailsModalProps) => {
-    // Same fix applied here — ternaries were inverted in the original
-    const modalBg     = isDark ? 'bg-gray-900'   : 'bg-white';
-    const textPrimary = isDark ? 'text-white'     : 'text-gray-900';
-    const textMuted   = isDark ? 'text-gray-500'  : 'text-gray-400';
-    const borderColor = isDark ? 'border-gray-800' : 'border-gray-100';
-    const itemBg      = isDark ? 'bg-gray-800/50' : 'bg-gray-50';
-    const iconBg      = isDark ? 'bg-gray-800'    : 'bg-gray-100';
-    const iconText    = isDark ? 'text-gray-500'  : 'text-gray-400';
-    const closeBtn    = isDark ? 'hover:bg-gray-800 text-gray-300' : 'hover:bg-gray-100 text-gray-700';
-    const btnPrimary  = isDark
-        ? 'bg-white text-gray-900 hover:bg-gray-100'
-        : 'bg-gray-900 text-white hover:bg-gray-800';
+        {/* Enhanced Glossy Website Logo */}
+        <div className="flex-1 lg:flex-none flex justify-center lg:justify-start">
+          <Link
+            to="/"
+            className="group relative flex items-center space-x-3 transition-all duration-300"
+          >
+            {/* Glossy 3D Logo Container */}
+            <div className="relative">
+              {/* Main logo box with glossy effect */}
+              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-gray-700 via-gray-800 to-gray-900 flex items-center justify-center shadow-2xl transform transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 overflow-hidden">
+                {/* Glossy overlay - creates the glass/shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-black/20"></div>
 
-    return (
-        <>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={onClose}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
+                {/* Diagonal shine line */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+
+                {/* Top highlight for glass effect */}
+                <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent rounded-t-2xl"></div>
+
+                {/* Letter C with inner shadow */}
+                <span className="text-white font-black text-2xl sm:text-3xl tracking-tighter transform transition-transform group-hover:scale-105 relative z-10 drop-shadow-lg">
+                  C
+                </span>
+
+                {/* Decorative elements */}
+                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-amber-400 rounded-full animate-pulse shadow-lg"></div>
+                <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-400 rounded-full animate-pulse delay-150 shadow-lg"></div>
+              </div>
+
+              {/* Animated glowing rings around logo */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-gray-400 via-amber-400 to-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl"></div>
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-gray-500 via-pink-500 to-gray-600 opacity-0 group-hover:opacity-30 transition-opacity duration-500 blur-md -z-20"></div>
+
+              {/* Outer ring animation */}
+              <div className="absolute -inset-2 rounded-2xl border-2 border-gray-400/0 group-hover:border-gray-400/30 transition-all duration-500 -z-30"></div>
+            </div>
+
+            {/* Brand Name with letter spacing and glossy text effect */}
+            <div className="flex flex-col">
+              <span className={cn(
+                "text-xl sm:text-2xl font-black tracking-tighter transition-all duration-300 relative",
+                logoColor,
+                "group-hover:tracking-tight"
+              )}>
+                CARTIFY
+                {/* Glossy text overlay effect */}
+                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></span>
+              </span>
+              <span className="text-[8px] sm:text-[10px] font-medium tracking-[0.2em] uppercase text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                Premium Store
+              </span>
+            </div>
+
+            {/* Subtle underline effect on hover */}
+            <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-500 via-amber-500 to-gray-600 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left rounded-full shadow-lg"></div>
+          </Link>
+        </div>
+
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex items-center space-x-6 xl:space-x-8 text-xs xl:text-sm font-medium uppercase tracking-widest">
+          <a
+            href="#"
+            onClick={(e) => handleLinkClick(e, 'Shop')}
+            className={cn("transition-colors duration-300 cursor-pointer relative group", textColor, hoverColor)}
+          >
+            Shop
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-current transition-all duration-300 group-hover:w-full"></span>
+          </a>
+          <Link
+            to="/new-arrivals"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={cn("transition-colors duration-300 cursor-pointer relative group", textColor, hoverColor)}
+          >
+            New Arrivals
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-current transition-all duration-300 group-hover:w-full"></span>
+          </Link>
+          <Link
+            to="/sustainability"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={cn("transition-colors duration-300 cursor-pointer relative group", textColor, hoverColor)}
+          >
+            Sustainability
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-current transition-all duration-300 group-hover:w-full"></span>
+          </Link>
+          <a
+            href="#"
+            onClick={(e) => handleLinkClick(e, 'About')}
+            className={cn("transition-colors duration-300 cursor-pointer relative group", textColor, hoverColor)}
+          >
+            About
+            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-current transition-all duration-300 group-hover:w-full"></span>
+          </a>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-4">
+          {/* Search input */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className={cn(
+              "flex items-center rounded-full px-3 sm:px-4 py-1 transition-all duration-300",
+              searchBgColor,
+              isSearchOpen ? "w-28 sm:w-48 md:w-64 opacity-100 ml-0" : "w-0 opacity-0 overflow-hidden px-0 ml-0"
+            )}
+          >
+            <Search className={cn("w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0", iconColor)} />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search..."
+              value={searchValue}
+              onChange={handleSearchChange}
+              className={cn(
+                "bg-transparent border-none outline-none text-xs w-full cursor-text",
+                searchTextColor,
+                searchPlaceholderColor
+              )}
             />
-            <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1,   y: 0  }}
-                exit={  { opacity: 0, scale: 0.95, y: 20 }}
-                className={`fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg z-[210] rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] ${modalBg}`}
+            {searchValue && (
+              <button
+                type="button"
+                onClick={handleClearSearch}
+                className="ml-1 sm:ml-2 p-0.5 sm:p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors flex-shrink-0"
+                aria-label="Clear search"
+              >
+                <X className="w-2 h-2 sm:w-3 sm:h-3 text-gray-600" />
+              </button>
+            )}
+          </form>
+
+          {/* Search toggle button */}
+          <button
+            onClick={handleSearchToggle}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors", buttonBgHover, textColor)}
+            aria-label="Toggle search"
+          >
+            <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+
+          {/* Wishlist - Desktop only */}
+          <Link
+            to="/wishlist"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative hidden sm:block", buttonBgHover, textColor)}
+            aria-label="Wishlist"
+          >
+            <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
+            {wishlistCount > 0 && (
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-gray-900 text-white">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Lettered Avatar / User menu - Desktop only */}
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={user ? () => setIsUserMenuOpen(!isUserMenuOpen) : onAuthClick}
+              className="transition-all duration-300 focus:outline-none"
+              aria-label="User menu"
             >
-                {/* Header */}
-                <div className={`p-6 border-b flex items-center justify-between flex-shrink-0 ${borderColor}`}>
-                    <div>
-                        <h2 className={`text-xl font-serif font-bold ${textPrimary}`}>Order Details</h2>
-                        <p className={`font-mono text-sm mt-0.5 ${textMuted}`}>{order.orderId}</p>
+              {user ? (
+                <LetteredAvatar
+                  initials={getUserInitials()}
+                  gradient={getUserGradient()}
+                />
+              ) : (
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 shadow-lg flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                </div>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isUserMenuOpen && user && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute right-0 mt-2 w-48 sm:w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-[60]"
+                  style={{ backgroundColor: 'white' }}
+                >
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center space-x-3">
+                    <LetteredAvatar initials={getUserInitials()} gradient={getUserGradient()} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-widest">Signed in as</p>
+                      <p className="text-xs sm:text-sm font-medium truncate text-gray-900">{user.name || user.email}</p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className={`p-2 rounded-full transition-colors ${closeBtn}`}
+                  </div>
+                  <Link
+                    to="/my-orders"
+                    className="flex items-center px-4 py-2 text-xs sm:text-sm text-gray-900 hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <Package className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" />
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="flex items-center px-4 py-2 text-xs sm:text-sm text-gray-900 hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 mr-2 text-gray-500" />
+                    My Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsUserMenuOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs sm:text-sm text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Cart button */}
+          <button
+            onClick={onCartClick}
+            className={cn("p-1.5 sm:p-2 rounded-full transition-colors relative", buttonBgHover, textColor)}
+            aria-label="Shopping cart"
+          >
+            <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] font-bold w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center rounded-full bg-gray-900 text-white">
+                {cartCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+              className="fixed inset-0 backdrop-blur-sm z-[100]"
+            />
+
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className={cn(
+                "fixed inset-y-0 left-0 w-[280px] sm:w-[320px] z-[101] shadow-2xl flex flex-col min-h-screen",
+                mobileBg
+              )}
+            >
+              {/* Header */}
+              <div className={cn("flex items-center justify-between p-6 border-b", mobileBorder, mobileBg)}>
+                <Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center shadow-md">
+                    <span className="text-white font-bold text-lg">C</span>
+                  </div>
+                  <span className={cn("text-xl font-serif font-bold tracking-tighter", mobileText)}>
+                    CARTIFY
+                  </span>
+                </Link>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn("p-2 rounded-full transition-colors", mobileCloseBtn)}
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Nav links */}
+              <div className={cn("flex-1 overflow-y-auto py-6 px-6", mobileBg)}>
+                <div className="flex flex-col space-y-1">
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'Shop All')}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    Shop All
+                  </a>
+                  <Link
+                    to="/new-arrivals"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    New Arrivals
+                  </Link>
+                  <Link
+                    to="/sustainability"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    Sustainability
+                  </Link>
+                  <Link
+                    to="/my-orders"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    My Orders
+                  </Link>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    My Profile
+                  </Link>
+                  <Link
+                    to="/wishlist"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium flex items-center justify-between", mobileText, mobileHover)}
+                  >
+                    <span>Wishlist</span>
+                    {wishlistCount > 0 && (
+                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-emerald-600 text-white">
+                        {wishlistCount}
+                      </span>
+                    )}
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={(e) => handleLinkClick(e, 'Our Story')}
+                    className={cn("py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium block", mobileText, mobileHover)}
+                  >
+                    Our Story
+                  </a>
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div className={cn("border-t p-6", mobileBorder, mobileBg)}>
+                <div className="flex flex-col space-y-3">
+                  {!user ? (
+                    <div
+                      onClick={() => {
+                        onAuthClick();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={cn("flex items-center space-x-3 py-3 px-4 -mx-4 rounded-lg transition-colors cursor-pointer", mobileText, mobileHover)}
                     >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                {/* Body */}
-                <div className="p-6 overflow-y-auto flex-1">
-                    <div className="flex items-center justify-between mb-6">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                            {getStatusIcon(order.status)}
-                            <span className="capitalize">{(order.status || '').toLowerCase()}</span>
-                        </span>
-                        <div className={`flex items-center gap-1.5 text-sm ${textMuted}`}>
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(order.orderDate)}
-                        </div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-base font-medium">Sign In / Register</span>
                     </div>
+                  ) : (
+                    <>
+                      <div className={cn("flex items-center space-x-3 px-4 py-2 rounded-xl", mobileUserBg)}>
+                        <LetteredAvatar initials={getUserInitials()} gradient={getUserGradient()} />
+                        <div className="flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Signed in as</p>
+                          <p className={cn("text-sm font-medium truncate", mobileText)}>{user.name || user.email}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          onLogout();
+                        }}
+                        className="flex items-center space-x-3 py-3 px-4 -mx-4 rounded-lg transition-colors text-base font-medium text-red-600 hover:bg-red-50"
+                      >
+                        <span>Logout</span>
+                      </button>
+                    </>
+                  )}
 
-                    <h3 className={`text-sm font-semibold uppercase tracking-wide mb-3 ${textMuted}`}>
-                        Items Ordered
-                    </h3>
-                    <div className="space-y-3 mb-6">
-                        {(order.items || []).map((item, idx) => (
-                            <div key={idx} className={`flex items-center gap-3 p-3 rounded-xl ${itemBg}`}>
-                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                                    <Package className={`w-4 h-4 ${iconText}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-medium truncate ${textPrimary}`}>
-                                        {item.productName}
-                                    </p>
-                                    <p className={`text-xs mt-0.5 ${textMuted}`}>
-                                        {formatCurrency(item.price)} × {item.quantity}
-                                    </p>
-                                </div>
-                                <p className={`text-sm font-semibold flex-shrink-0 ${textPrimary}`}>
-                                    {formatCurrency(item.subtotal)}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Totals */}
-                    <div className={`border-t pt-4 space-y-2 ${borderColor}`}>
-                        <div className="flex justify-between text-sm">
-                            <span className={textMuted}>Subtotal</span>
-                            <span className={textPrimary}>{formatCurrency(order.totalAmount)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className={textMuted}>Shipping</span>
-                            <span className={`font-medium ${isDark ? 'text-green-400' : 'text-green-600'}`}>
-                                Free
-                            </span>
-                        </div>
-                        <div className={`flex justify-between pt-2 border-t ${borderColor}`}>
-                            <span className={`font-bold ${textPrimary}`}>Total</span>
-                            <span className={`font-bold ${textPrimary}`}>{formatCurrency(order.totalAmount)}</span>
-                        </div>
-                    </div>
+                  <div
+                    onClick={handleMobileSearchClick}
+                    className={cn("flex items-center space-x-3 py-3 px-4 -mx-4 rounded-lg transition-colors cursor-pointer", mobileText, mobileHover)}
+                  >
+                    <Search className="w-5 h-5" />
+                    <span className="text-base font-medium">Search</span>
+                  </div>
                 </div>
-
-                {/* Footer */}
-                <div className={`p-6 border-t flex-shrink-0 ${borderColor}`}>
-                    <button
-                        onClick={onClose}
-                        className={`w-full py-3 rounded-xl font-medium transition-colors ${btnPrimary}`}
-                    </button>
-                </div>
+              </div>
             </motion.div>
-        </>
-    );
+          </>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
 };
