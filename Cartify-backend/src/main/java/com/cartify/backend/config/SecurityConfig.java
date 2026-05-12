@@ -19,9 +19,7 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-    // ✅ Declare as @Bean here instead of @Component on the class,
-    //    so Spring only registers it once — inside the security filter chain.
+    
     @Bean
     public JwtFilter jwtFilter() {
         return new JwtFilter();
@@ -37,6 +35,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
+                    "/api/health/**",
                     "/api/auth/login",
                     "/api/auth/register",
                     "/api/auth/forgot-password/**",
